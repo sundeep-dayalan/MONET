@@ -23,27 +23,42 @@ jobs:
           
       - name: Create deployment packages
         run: |
-          # Create a releases directory in the root
           mkdir -p releases
           
           # Frontend package
-          echo "=== Creating frontend package ==="
+          echo "Creating frontend package..."
           cd packages/client
           mkdir -p ../../releases/frontend-deploy
           cp -r dist/* ../../releases/frontend-deploy/
           cd ../../releases/frontend-deploy
+          cat > web.config << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <system.webServer>
+              <rewrite>
+                <rules>
+                  <rule name="Handle History Mode" stopProcessing="true">
+                    <match url="(.*)" />
+                    <conditions logicalGrouping="MatchAll">
+                      <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+                      <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+                    </conditions>
+                    <action type="Rewrite" url="/" />
+                  </rule>
+                </rules>
+              </rewrite>
+            </system.webServer>
+          </configuration>
+          EOF
           zip -r ../monet-frontend.zip .
           cd ../..
-          echo "Frontend package created"
           
-          # Backend package
-          echo "=== Creating backend package ==="
+          # Backend package - Azure Functions
+          echo "Creating backend package..."
           cd packages/core
-          
-          # Create Azure Functions deployment structure
           mkdir -p ../../releases/api-deploy
           
-          # Copy compiled JavaScript files
+          # Copy all compiled files to deployment directory
           cp -r dist/* ../../releases/api-deploy/
           cp package.json ../../releases/api-deploy/
           
@@ -67,9 +82,9 @@ jobs:
           }
           EOF
           
-          # Create function directory and config
-          mkdir -p expressApp
-          cat > expressApp/function.json << 'EOF'
+          # CRITICAL: Create the function directory and function.json
+          mkdir -p api
+          cat > api/function.json << 'EOF'
           {
             "bindings": [
               {
@@ -90,17 +105,17 @@ jobs:
           }
           EOF
           
-          # Create the deployment package in releases directory
-          zip -r ../monet-api.zip . -x "node_modules/.cache/*"
+          # Debug: Verify structure
+          echo "Verifying function structure:"
+          ls -la
+          echo "Function directory contents:"
+          ls -la api/
+          echo "Checking function-wrapper.js:"
+          ls -la function-wrapper.js
           
-          # Go back to root
+          # Create deployment package
+          zip -r ../monet-api.zip .
           cd ../..
-          
-      - name: Verify packages
-        run: |
-          echo "=== Package verification ==="
-          ls -la releases/
-          du -h releases/monet-*.zip
           
       - name: Create Release
         uses: softprops/action-gh-release@v1
