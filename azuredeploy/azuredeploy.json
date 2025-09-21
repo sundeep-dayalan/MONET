@@ -158,6 +158,7 @@
       "properties": {
         "azPowerShellVersion": "7.2",
         "timeout": "PT30M",
+        "retentionInterval": "P1D",
         "cleanupPreference": "OnSuccess",
         "environmentVariables": [
           {
@@ -177,7 +178,7 @@
             "value": "[format('{0}/archive/refs/heads/{1}.zip', replace(parameters('repoURL'), '.git', ''), parameters('branch'))]"
           }
         ],
-        "scriptContent": "${function:zipdeploy_script}"
+        "scriptContent": "[function.zipdeploy_script()]"
       }
     }
   ],
@@ -188,7 +189,7 @@
         "zipdeploy_script": {
           "parameters": [],
           "output": {
-            "value": "\n$ProgressPreference = 'SilentlyContinue'\n$wc = New-Object System.Net.WebClient\n$creds = \"$env:KUDU_USER:$env:KUDU_PASS\"\n$wc.Headers.Add('Authorization', 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($creds)))\n$zipPath = Join-Path $env:TEMP 'app.zip'\nWrite-Host \"Downloading $env:REPO_ZIP_URL ...\"\n$wc.DownloadFile($env:REPO_ZIP_URL, $zipPath)\nWrite-Host \"Uploading to $env:KUDU_ZIPDEPLOY ...\"\n$wc.UploadFile($env:KUDU_ZIPDEPLOY, 'POST', $zipPath)\nWrite-Host 'ZipDeploy complete.'\n"
+            "value": "\n$ErrorActionPreference = 'Stop'\n$ProgressPreference = 'SilentlyContinue'\n$TempDir = [System.IO.Path]::GetTempPath()\n$repoZip = Join-Path $TempDir 'repo.zip'\nWrite-Host \"Downloading $env:REPO_ZIP_URL ...\"\nInvoke-WebRequest -Uri $env:REPO_ZIP_URL -OutFile $repoZip\n$extract = Join-Path $TempDir 'repo'\nif(Test-Path $extract){ Remove-Item $extract -Recurse -Force }\nNew-Item -ItemType Directory -Path $extract | Out-Null\nExpand-Archive -Path $repoZip -DestinationPath $extract\n$root = (Get-ChildItem -Path $extract | Where-Object { $_.PSIsContainer } | Select-Object -First 1).FullName\n$srcPath = Join-Path $root 'src'\nif(!(Test-Path $srcPath)){ throw 'src folder not found in repository archive' }\n$appZip = Join-Path $TempDir 'app.zip'\nif(Test-Path $appZip){ Remove-Item $appZip -Force }\nWrite-Host 'Zipping src contents...'\nCompress-Archive -Path (Join-Path $srcPath '*') -DestinationPath $appZip\n$creds = \"$env:KUDU_USER:$env:KUDU_PASS\"\n$bytes = [System.Text.Encoding]::ASCII.GetBytes($creds)\n$auth = [Convert]::ToBase64String($bytes)\n$headers = @{ Authorization = \"Basic $auth\" }\nWrite-Host \"Uploading to $env:KUDU_ZIPDEPLOY ...\"\nInvoke-WebRequest -Uri $env:KUDU_ZIPDEPLOY -Method POST -InFile $appZip -ContentType 'application/zip' -Headers $headers\nWrite-Host 'ZipDeploy complete.'\n"
           }
         }
       }
