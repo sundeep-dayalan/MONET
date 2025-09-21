@@ -43,7 +43,6 @@
     "functionAppName": "[format('{0}-{1}', parameters('appName'), variables('uniqueSuffix'))]",
     "storageAccountName": "[format('st{0}', replace(variables('uniqueSuffix'), '-', ''))]",
     "hostingPlanName": "[format('{0}-plan-{1}', parameters('appName'), variables('uniqueSuffix'))]",
-    "contentShareName": "[toLower(format('{0}-content', variables('functionAppName')))]",
     "appInsightsName": "[format('appi-{0}', variables('uniqueSuffix'))]"
   },
   "resources": [
@@ -94,14 +93,6 @@
             {
               "name": "AzureWebJobsStorage",
               "value": "[format('DefaultEndpointsProtocol=https,AccountName={0},AccountKey={1};EndpointSuffix=core.windows.net', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2022-09-01').keys[0].value)]"
-            },
-            {
-              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[format('DefaultEndpointsProtocol=https,AccountName={0},AccountKey={1};EndpointSuffix=core.windows.net', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2022-09-01').keys[0].value)]"
-            },
-            {
-              "name": "WEBSITE_CONTENTSHARE",
-              "value": "[variables('contentShareName')]"
             },
             {
               "name": "WEBSITE_RUN_FROM_PACKAGE",

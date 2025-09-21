@@ -13,9 +13,8 @@ param branch string = 'dummy'
 // Generate unique names for resources that require it
 var uniqueSuffix = uniqueString(resourceGroup().id)
 var functionAppName = '${appName}-${uniqueSuffix}'
-var storageAccountName = 'st${replace(uniqueSuffix, '-', '')}' // Storage names must be alphanumeric and lowercase
+var storageAccountName = 'stg${replace(uniqueSuffix, '-', '')}' // Ensure >=3 chars; Storage names must be alphanumeric and lowercase
 var hostingPlanName = '${appName}-plan-${uniqueSuffix}'
-var contentShareName = toLower('${functionAppName}-content')
 var appInsightsName = 'appi-${uniqueSuffix}'
 
 // Create a storage account required by the function app
@@ -65,14 +64,6 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
           value: 'DefaultEndpointsProtocol=https,AccountName=${storageAccountName},AccountKey=${storageAccount.listKeys().keys[0].value}'
         }
         {
-          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: 'DefaultEndpointsProtocol=https,AccountName=${storageAccountName},AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
-        }
-        {
-          name: 'WEBSITE_CONTENTSHARE'
-          value: contentShareName
-        }
-        {
           name: 'WEBSITE_RUN_FROM_PACKAGE'
           value: '0' // We are using source control deploy, not a package URL
         }
@@ -109,9 +100,6 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
     }
     httpsOnly: true
   }
-  dependsOn: [
-    appInsights
-  ]
 }
 
 // Configure the function app to deploy from the specified GitHub repository
