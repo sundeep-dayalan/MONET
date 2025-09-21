@@ -24,15 +24,68 @@ jobs:
           
       - name: Create deployment packages
         run: |
-          # Frontend package (static files)
+          # Frontend package - just the built static files
           cd packages/client
-          zip -r ../../monet-frontend.zip dist/ package.json
+          mkdir -p ../../frontend-deploy
+          cp -r dist/* ../../frontend-deploy/
+          cd ../../frontend-deploy
+          zip -r ../monet-frontend.zip .
+          cd ..
           
-          # Backend package (functions-ready)
-          cd ../core
-          # Add host.json for Azure Functions
-          echo '{"version":"2.0","extensionBundle":{"id":"Microsoft.Azure.Functions.ExtensionBundle","version":"[4.*,5.0.0)"}}' > host.json
-          zip -r ../../monet-api.zip dist/ package.json host.json
+          # Backend package - single Azure Function
+          cd packages/core
+          
+          # Create Azure Functions deployment structure
+          mkdir -p api-deploy
+          
+          # Copy compiled JavaScript files
+          cp -r dist/* api-deploy/
+          
+          # Copy package.json and install production dependencies
+          cp package.json api-deploy/
+          cd api-deploy
+          npm install --production
+          
+          # Update host.json for single function with no route prefix
+          cat > host.json << 'EOF'
+          {
+            "version": "2.0",
+            "extensionBundle": {
+              "id": "Microsoft.Azure.Functions.ExtensionBundle",
+              "version": "[4.*, 5.0.0)"
+            },
+            "functionTimeout": "00:05:00",
+            "http": {
+              "routePrefix": ""
+            }
+          }
+          EOF
+          
+          # Create function.json for the single Express wrapper function
+          mkdir -p expressApp
+          cat > expressApp/function.json << 'EOF'
+          {
+            "bindings": [
+              {
+                "authLevel": "anonymous",
+                "type": "httpTrigger",
+                "direction": "in",
+                "name": "req",
+                "methods": ["get", "post", "put", "delete", "patch", "options"],
+                "route": "{*segments}"
+              },
+              {
+                "type": "http",
+                "direction": "out",
+                "name": "res"
+              }
+            ],
+            "scriptFile": "../function-wrapper.js"
+          }
+          EOF
+          
+          # Create the deployment package
+          zip -r ../../monet-api.zip . -x "node_modules/.cache/*"
           
       - name: Create Release
         uses: softprops/action-gh-release@v1

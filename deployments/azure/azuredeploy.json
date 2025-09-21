@@ -3,58 +3,47 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "appName": {
-    "type": "string",
-    "defaultValue": "monet",
-    "metadata": {
-      "description": "Base name for the application"
-    }
-  },
+      "type": "string",
+      "defaultValue": "monet",
+      "metadata": {
+        "description": "Base name for the application"
+      }
+    },
     "releaseVersion": {
       "type": "string",
       "defaultValue": "latest"
     }
   },
   "variables": {
-     "uniqueSuffix": "[uniqueString(resourceGroup().id)]",
-  "staticWebAppName": "[concat(parameters('appName'), '-web-', variables('uniqueSuffix'))]",
-  "functionAppName": "[concat(parameters('appName'), '-api-', variables('uniqueSuffix'))]",
+    "uniqueSuffix": "[uniqueString(resourceGroup().id)]",
+    "staticWebAppName": "[concat(parameters('appName'), '-web-', variables('uniqueSuffix'))]",
+    "functionAppName": "[concat(parameters('appName'), '-api-', variables('uniqueSuffix'))]",
     "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
     "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]"
   },
   "resources": [
-    {
-      "type": "Microsoft.Web/staticSites",
-      "apiVersion": "2022-09-01",
-      "name": "[variables('staticWebAppName')]",
-      "location": "[resourceGroup().location]",
-      "sku": { "name": "Free", "tier": "Free" },
-      "properties": {
-        "repositoryUrl": "https://github.com/sundeep-dayalan/MONET",
-        "branch": "main",
-        "buildProperties": {
-          "appLocation": "packages/client",
-          "outputLocation": "dist"
-        }
-      }
-    },
     {
       "type": "Microsoft.Storage/storageAccounts",
       "apiVersion": "2022-09-01",
       "name": "[variables('storageAccountName')]",
       "location": "[resourceGroup().location]",
       "sku": { "name": "Standard_LRS" },
-      "kind": "StorageV2"
+      "kind": "StorageV2",
+      "properties": {
+        "allowBlobPublicAccess": true
+      }
     },
     {
-      "type": "Microsoft.Web/serverfarms", 
+      "type": "Microsoft.Web/serverfarms",
       "apiVersion": "2022-09-01",
       "name": "[variables('hostingPlanName')]",
       "location": "[resourceGroup().location]",
-      "sku": { "name": "Y1", "tier": "Dynamic" }
+      "sku": { "name": "Y1", "tier": "Dynamic" },
+      "properties": {}
     },
     {
       "type": "Microsoft.Web/sites",
-      "apiVersion": "2022-09-01", 
+      "apiVersion": "2022-09-01",
       "name": "[variables('functionAppName')]",
       "location": "[resourceGroup().location]",
       "kind": "functionapp",
@@ -69,8 +58,18 @@
             { "name": "FUNCTIONS_EXTENSION_VERSION", "value": "~4" },
             { "name": "FUNCTIONS_WORKER_RUNTIME", "value": "node" },
             { "name": "WEBSITE_NODE_DEFAULT_VERSION", "value": "~20" },
-            { "name": "WEBSITE_RUN_FROM_PACKAGE", "value": "1" }
-          ]
+            { "name": "WEBSITE_RUN_FROM_PACKAGE", "value": "1" },
+            { "name": "FUNCTIONS_WORKER_RUNTIME_VERSION", "value": "~20" },
+            {
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2022-09-01').keys[0].value)]"
+            },
+            { "name": "WEBSITE_CONTENTSHARE", "value": "[variables('functionAppName')]" }
+          ],
+          "cors": {
+            "allowedOrigins": ["*"],
+            "supportCredentials": false
+          }
         }
       },
       "dependsOn": [
@@ -79,16 +78,34 @@
       ]
     },
     {
+      "type": "Microsoft.Web/staticSites",
+      "apiVersion": "2022-09-01",
+      "name": "[variables('staticWebAppName')]",
+      "location": "[resourceGroup().location]",
+      "sku": { "name": "Free", "tier": "Free" },
+      "properties": {}
+    },
+    {
       "type": "Microsoft.Web/sites/extensions",
       "apiVersion": "2022-09-01",
-      "name": "[concat(variables('functionAppName'), '/ZipDeploy')]", 
+      "name": "[concat(variables('functionAppName'), '/ZipDeploy')]",
       "properties": {
         "packageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-api.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-api.zip'))]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
-        ]
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/staticSites/staticSiteZipDeployments",
+      "apiVersion": "2022-09-01",
+      "name": "[concat(variables('staticWebAppName'), '/main')]",
+      "properties": {
+        "appZipUrl": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-frontend.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-frontend.zip'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/staticSites', variables('staticWebAppName'))]"
+      ]
     }
   ],
   "outputs": {
@@ -97,7 +114,7 @@
       "value": "[concat('https://', reference(variables('staticWebAppName')).defaultHostname)]"
     },
     "apiUrl": {
-      "type": "string", 
+      "type": "string",
       "value": "[concat('https://', reference(variables('functionAppName')).defaultHostName)]"
     }
   }
