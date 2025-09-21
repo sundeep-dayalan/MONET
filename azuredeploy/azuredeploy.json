@@ -144,30 +144,52 @@
       ]
     },
     {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2021-04-01",
-      "name": "configureSourceControl",
+      "type": "Microsoft.Resources/deploymentScripts",
+      "apiVersion": "2020-10-01",
+      "name": "zipDeployFromGitHub",
+      "location": "[parameters('location')]",
+      "kind": "AzurePowerShell",
+      "identity": {
+        "type": "SystemAssigned"
+      },
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
       ],
       "properties": {
-        "mode": "Incremental",
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "resources": [
-            {
-              "type": "Microsoft.Web/sites/sourcecontrols",
-              "apiVersion": "2018-02-01",
-              "name": "[format('{0}/web', variables('functionAppName'))]",
-              "properties": {
-                "repoUrl": "[parameters('repoURL')]",
-                "branch": "[parameters('branch')]",
-                "isManualIntegration": true,
-                "isMercurial": false
-              }
-            }
-          ]
+        "azPowerShellVersion": "7.2",
+        "timeout": "PT30M",
+        "cleanupPreference": "OnSuccess",
+        "environmentVariables": [
+          {
+            "name": "KUDU_USER",
+            "value": "[list(resourceId('Microsoft.Web/sites/config', variables('functionAppName'), 'publishingcredentials'), '2022-09-01').properties.publishingUserName]"
+          },
+          {
+            "name": "KUDU_PASS",
+            "secureValue": "[list(resourceId('Microsoft.Web/sites/config', variables('functionAppName'), 'publishingcredentials'), '2022-09-01').properties.publishingPassword]"
+          },
+          {
+            "name": "KUDU_ZIPDEPLOY",
+            "value": "[format('https://{0}.scm.azurewebsites.net/api/zipdeploy', variables('functionAppName'))]"
+          },
+          {
+            "name": "REPO_ZIP_URL",
+            "value": "[format('{0}/archive/refs/heads/{1}.zip', replace(parameters('repoURL'), '.git', ''), parameters('branch'))]"
+          }
+        ],
+        "scriptContent": "${function:zipdeploy_script}"
+      }
+    }
+  ],
+  "functions": [
+    {
+      "namespace": "function",
+      "members": {
+        "zipdeploy_script": {
+          "parameters": [],
+          "output": {
+            "value": "\n$ProgressPreference = 'SilentlyContinue'\n$wc = New-Object System.Net.WebClient\n$creds = \"$env:KUDU_USER:$env:KUDU_PASS\"\n$wc.Headers.Add('Authorization', 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($creds)))\n$zipPath = Join-Path $env:TEMP 'app.zip'\nWrite-Host \"Downloading $env:REPO_ZIP_URL ...\"\n$wc.DownloadFile($env:REPO_ZIP_URL, $zipPath)\nWrite-Host \"Uploading to $env:KUDU_ZIPDEPLOY ...\"\n$wc.UploadFile($env:KUDU_ZIPDEPLOY, 'POST', $zipPath)\nWrite-Host 'ZipDeploy complete.'\n"
+          }
         }
       }
     }
