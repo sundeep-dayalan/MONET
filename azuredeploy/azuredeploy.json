@@ -127,10 +127,6 @@
               "value": "false"
             },
             {
-              "name": "WEBSITE_PROJECT_PATH",
-              "value": "src"
-            },
-            {
               "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
               "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').InstrumentationKey]"
             },
