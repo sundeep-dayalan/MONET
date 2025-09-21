@@ -113,18 +113,21 @@ resource "azurerm_key_vault" "main" {
 data "azurerm_client_config" "current" {}
 
 resource "azurerm_role_assignment" "kv_secrets_officer" {
+  name                 = uuid()
   scope                = azurerm_key_vault.main.id
   role_definition_name = "Key Vault Secrets Officer"
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
 resource "azurerm_role_assignment" "kv_crypto_user" {
+  name                 = uuid()
   scope                = azurerm_key_vault.main.id
   role_definition_name = "Key Vault Crypto User"
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
 resource "azurerm_role_assignment" "kv_crypto_officer" {
+  name                 = uuid()
   scope                = azurerm_key_vault.main.id
   role_definition_name = "Key Vault Crypto Officer"
   principal_id         = data.azurerm_client_config.current.object_id
