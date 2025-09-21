@@ -1,9 +1,7 @@
-const componentGenerator = require('./generators/component/index');
-
+const startercraft = require('@startercraft/cli');
 /**
- *
  * @param {import('plop').NodePlopAPI} plop
  */
 module.exports = function (plop) {
-  plop.setGenerator('component', componentGenerator);
+  startercraft.default(plop);
 };

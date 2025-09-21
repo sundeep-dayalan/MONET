@@ -1,11 +1,19 @@
-import * as React from "react"; 
+import React from 'react';
+import clsx from 'clsx';
+import { {{ pascalCase name }}Props } from './{{ kebabCase name }}.types';
+import styles from './{{ kebabCase name }}.module.scss';
+import use{{pascalCase name}}ViewModel from './{{ kebabCase name }}.view-model';
 
-export type {{properCase name}}Props = {};
+function {{ pascalCase name }}(props: {{ pascalCase name }}Props) {
+const { children, className, testingID, style } = props;
 
-export const {{properCase name}} = (props: {{properCase name}}Props) => { 
-  return (
-    <div>
-      {{properCase name}}
-    </div>
-  ); 
-};
+const { } = use{{pascalCase name}}ViewModel(props);
+
+return (
+<div className={clsx('{{ kebabCase name }}', styles.{{ camelCase name }}, className)} data-testid={testingID} style={style}>
+  {children}
+</div>
+);
+}
+
+export default React.memo({{ pascalCase name }});
