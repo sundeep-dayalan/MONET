@@ -55,7 +55,6 @@
     "cosmosAccountName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-cosmos')]",
     "appInsightsName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-insights')]",
     "keyVaultName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-kv')]",
-    "servicePlanName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-plan')]",
     "functionAppName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-api')]",
     "staticWebAppName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-web')]"
   },
@@ -307,29 +306,12 @@
       }
     },
     {
-      "type": "Microsoft.Web/serverfarms",
-      "apiVersion": "2023-01-01",
-      "name": "[variables('servicePlanName')]",
-      "location": "[parameters('location')]",
-      "sku": {
-        "name": "Y1",
-        "tier": "Dynamic"
-      },
-      "properties": {
-        "reserved": true
-      },
-      "tags": {
-        "project": "[parameters('projectName')]"
-      }
-    },
-    {
       "type": "Microsoft.Web/sites",
       "apiVersion": "2023-01-01",
       "name": "[variables('functionAppName')]",
       "location": "[parameters('location')]",
       "kind": "functionapp,linux",
       "dependsOn": [
-        "[resourceId('Microsoft.Web/serverfarms', variables('servicePlanName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
         "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
       ],
@@ -337,11 +319,18 @@
         "type": "SystemAssigned"
       },
       "properties": {
-        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('servicePlanName'))]",
         "httpsOnly": true,
         "siteConfig": {
           "linuxFxVersion": "Python|3.11",
           "appSettings": [
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value)]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~4"
+            },
             {
               "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
               "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName'))).ConnectionString]"
@@ -349,10 +338,6 @@
             {
               "name": "FUNCTIONS_WORKER_RUNTIME",
               "value": "python"
-            },
-            {
-              "name": "AzureWebJobsStorage__accountName",
-              "value": "[variables('storageAccountName')]"
             },
             {
               "name": "COSMOS_DB_ENDPOINT",
