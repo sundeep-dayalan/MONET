@@ -83,10 +83,7 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
           name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
           value: 'true'
         }
-        {
-          name: 'WEBSITE_PROJECT_PATH'
-          value: 'src'
-        }
+        
         {
           name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
           value: appInsights.properties.InstrumentationKey
