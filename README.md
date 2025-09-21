@@ -4,29 +4,63 @@
 
 This project provides a comprehensive solution for financial management, built with a modern stack.
 
-## One-Click Deployment to Azure
+## 🚀 One-Click Deployment to Azure
 
-This repository is configured for a streamlined, one-click deployment to Azure using Terraform and a "Deploy to Azure" button.
+Deploy the complete MONET Financial Management App infrastructure to Azure with a single click! This deployment automatically provisions all necessary Azure resources and prepares your application for immediate use.
 
-### What this deployment does:
+### 🏗️ What gets deployed:
 
-*   **Provisions Infrastructure with Terraform:** All necessary Azure resources are defined as code using Terraform, ensuring a repeatable and reliable setup. This includes:
-    *   Resource Group
-    *   Storage Account
-    *   Cosmos DB (with databases and containers)
-    *   Application Insights
-    *   Key Vault
-    *   Function App (for the backend)
-    *   Static Web App (for the frontend)
-*   **Deploys Application Code:**
-    *   The Node.js backend is deployed to the Azure Function App.
-    *   The React frontend is built and deployed to the Azure Static Web App.
+**Core Infrastructure:**
+*   **Resource Group** - Logical container for all resources
+*   **Azure Cosmos DB** - NoSQL database with dev/prod databases and containers (users, accounts, transactions, plaid_tokens)
+*   **Azure Functions** - Serverless backend API (Python 3.11)
+*   **Azure Static Web Apps** - React frontend hosting
+*   **Azure Key Vault** - Secure secrets management
+*   **Azure Storage Account** - File storage and Function App storage
+*   **Application Insights** - Monitoring and analytics
 
-### How to Deploy:
+**Security & Configuration:**
+*   Managed Identity for secure authentication
+*   RBAC-enabled Key Vault access
+*   CORS configuration for cross-origin requests
+*   HTTPS-only enforcement
+*   Minimal required permissions
 
-1.  Click the **Deploy to Azure** button above.
-2.  You will be redirected to the Azure Portal.
-3.  Fill in the required parameters (project name, location, etc.).
-4.  Click **Review + create** and then **Create**.
+### 📋 Prerequisites:
 
-The deployment process will take several minutes. Once complete, the outputs will provide you with the URLs for your frontend and backend services.
+- Azure subscription
+- Contributor access to create resources
+- GitHub account (for code deployment)
+
+### 🎯 How to Deploy:
+
+1.  **Click the Deploy to Azure button above** ⬆️
+2.  **Sign in to Azure Portal** (if not already signed in)
+3.  **Configure deployment parameters:**
+    - Project Name: `monet` (or customize)
+    - Location: Choose your preferred Azure region
+    - Environment: `prod`, `dev`, or `staging`
+    - Static Web App Location: Choose from available regions
+4.  **Click "Review + create"** then **"Create"**
+5.  **Wait for deployment** (typically 5-10 minutes)
+
+### 🎉 Post-Deployment Steps:
+
+After the infrastructure deployment completes:
+
+1. **Note the output URLs** from the deployment results
+2. **Configure Azure AD applications** (see post-deployment guide)
+3. **Deploy application code** to Function App and Static Web App
+4. **Access your MONET app** via the provided Static Web App URL
+
+### 📊 What you'll get:
+
+- **Frontend URL**: `https://monet-[suffix]-web.azurestaticapps.net`
+- **Backend API URL**: `https://monet-[suffix]-api.azurewebsites.net`
+- **Cosmos DB**: Ready with dev/prod databases
+- **Key Vault**: Configured for secure secrets management
+- **Monitoring**: Application Insights ready for observability
+
+### 🔧 Manual Deployment Alternative:
+
+If you prefer to deploy manually using Terraform:

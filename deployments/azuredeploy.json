@@ -1,72 +1,445 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "MONET Financial Management App - Complete Azure Infrastructure Deployment",
+    "author": "MONET Development Team"
+  },
   "parameters": {
     "projectName": {
       "type": "string",
       "defaultValue": "monet",
+      "minLength": 3,
+      "maxLength": 10,
       "metadata": {
-        "description": "The name of the project."
+        "description": "Name of the project (used as prefix for all resources)"
       }
     },
     "location": {
       "type": "string",
-      "defaultValue": "Central US",
+      "defaultValue": "[resourceGroup().location]",
       "metadata": {
-        "description": "The Azure region to deploy to."
+        "description": "Azure region for deployment"
       }
     },
     "environment": {
       "type": "string",
       "defaultValue": "prod",
+      "allowedValues": [
+        "dev",
+        "staging", 
+        "prod"
+      ],
       "metadata": {
-        "description": "The deployment environment."
+        "description": "Deployment environment"
+      }
+    },
+    "staticWebAppLocation": {
+      "type": "string",
+      "defaultValue": "Central US",
+      "allowedValues": [
+        "Central US",
+        "East US 2",
+        "East Asia",
+        "West Europe",
+        "West US 2"
+      ],
+      "metadata": {
+        "description": "Location for Static Web App (limited regions)"
       }
     }
   },
+  "variables": {
+    "uniqueSuffix": "[substring(uniqueString(resourceGroup().id), 0, 8)]",
+    "storageAccountName": "[concat(parameters('projectName'), variables('uniqueSuffix'), 'storage')]",
+    "cosmosAccountName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-cosmos')]",
+    "appInsightsName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-insights')]",
+    "keyVaultName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-kv')]",
+    "servicePlanName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-plan')]",
+    "functionAppName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-api')]",
+    "staticWebAppName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-web')]"
+  },
   "resources": [
     {
-      "type": "Microsoft.Resources/deploymentScripts",
-      "apiVersion": "2020-10-01",
-      "name": "runTerraformDeployment",
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('storageAccountName')]",
       "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "supportsHttpsTrafficOnly": true,
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false,
+        "allowSharedKeyAccess": false,
+        "accessTier": "Hot"
+      },
+      "tags": {
+        "project": "[parameters('projectName')]",
+        "environment": "[parameters('environment')]"
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2023-04-15",
+      "name": "[variables('cosmosAccountName')]",
+      "location": "[parameters('location')]",
+      "kind": "GlobalDocumentDB",
+      "properties": {
+        "databaseAccountOfferType": "Standard",
+        "consistencyPolicy": {
+          "defaultConsistencyLevel": "Session"
+        },
+        "locations": [
+          {
+            "locationName": "[parameters('location')]",
+            "failoverPriority": 0,
+            "isZoneRedundant": false
+          }
+        ],
+        "capabilities": [
+          {
+            "name": "EnableServerless"
+          }
+        ],
+        "enableFreeTier": true
+      },
+      "tags": {
+        "project": "[parameters('projectName')]"
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+      "apiVersion": "2023-04-15",
+      "name": "[concat(variables('cosmosAccountName'), '/', parameters('projectName'), '-dev-db')]",
       "dependsOn": [
-        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'deployer-identity')]"
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))]"
       ],
-      "kind": "AzureCLI",
-      "identity": {
-        "type": "UserAssigned",
-        "userAssignedIdentities": {
-          "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.ManagedIdentity/userAssignedIdentities/deployer-identity')]": {}
+      "properties": {
+        "resource": {
+          "id": "[concat(parameters('projectName'), '-dev-db')]"
         }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+      "apiVersion": "2023-04-15",
+      "name": "[concat(variables('cosmosAccountName'), '/', parameters('projectName'), '-prod-db')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "[concat(parameters('projectName'), '-prod-db')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2023-04-15",
+      "name": "[concat(variables('cosmosAccountName'), '/', parameters('projectName'), '-dev-db/users')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosAccountName'), concat(parameters('projectName'), '-dev-db'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "users",
+          "partitionKey": {
+            "paths": ["/userId"],
+            "kind": "Hash"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2023-04-15",
+      "name": "[concat(variables('cosmosAccountName'), '/', parameters('projectName'), '-dev-db/accounts')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosAccountName'), concat(parameters('projectName'), '-dev-db'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "accounts",
+          "partitionKey": {
+            "paths": ["/userId"],
+            "kind": "Hash"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2023-04-15",
+      "name": "[concat(variables('cosmosAccountName'), '/', parameters('projectName'), '-dev-db/transactions')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosAccountName'), concat(parameters('projectName'), '-dev-db'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "transactions",
+          "partitionKey": {
+            "paths": ["/userId"],
+            "kind": "Hash"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2023-04-15",
+      "name": "[concat(variables('cosmosAccountName'), '/', parameters('projectName'), '-dev-db/plaid_tokens')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosAccountName'), concat(parameters('projectName'), '-dev-db'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "plaid_tokens",
+          "partitionKey": {
+            "paths": ["/userId"],
+            "kind": "Hash"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2023-04-15",
+      "name": "[concat(variables('cosmosAccountName'), '/', parameters('projectName'), '-prod-db/users')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosAccountName'), concat(parameters('projectName'), '-prod-db'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "users",
+          "partitionKey": {
+            "paths": ["/userId"],
+            "kind": "Hash"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2023-04-15",
+      "name": "[concat(variables('cosmosAccountName'), '/', parameters('projectName'), '-prod-db/accounts')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosAccountName'), concat(parameters('projectName'), '-prod-db'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "accounts",
+          "partitionKey": {
+            "paths": ["/userId"],
+            "kind": "Hash"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2023-04-15",
+      "name": "[concat(variables('cosmosAccountName'), '/', parameters('projectName'), '-prod-db/transactions')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosAccountName'), concat(parameters('projectName'), '-prod-db'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "transactions",
+          "partitionKey": {
+            "paths": ["/userId"],
+            "kind": "Hash"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2023-04-15",
+      "name": "[concat(variables('cosmosAccountName'), '/', parameters('projectName'), '-prod-db/plaid_tokens')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosAccountName'), concat(parameters('projectName'), '-prod-db'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "plaid_tokens",
+          "partitionKey": {
+            "paths": ["/userId"],
+            "kind": "Hash"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('appInsightsName')]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "RetentionInDays": 30
+      },
+      "tags": {
+        "project": "[parameters('projectName')]"
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-02-01",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "tenantId": "[subscription().tenantId]",
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "enableRbacAuthorization": true,
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 7,
+        "enablePurgeProtection": false
+      },
+      "tags": {
+        "project": "[parameters('projectName')]"
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('servicePlanName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Y1",
+        "tier": "Dynamic"
       },
       "properties": {
-        "azCliVersion": "2.30.0",
-        "scriptContent": "[concat(uri(deployment().properties.templateLink.uri, 'deploy.sh'))]",
-        "arguments": "[concat('--project-name ', parameters('projectName'), ' --location ', parameters('location'), ' --environment ', parameters('environment'))]",
-        "timeout": "PT30M",
-        "cleanupPreference": "OnSuccess",
-        "retentionInterval": "P1D"
+        "reserved": true
+      },
+      "tags": {
+        "project": "[parameters('projectName')]"
       }
     },
     {
-      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-      "apiVersion": "2018-11-30",
-      "name": "deployer-identity",
-      "location": "[parameters('location')]"
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('functionAppName')]",
+      "location": "[parameters('location')]",
+      "kind": "functionapp,linux",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('servicePlanName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+      ],
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('servicePlanName'))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "linuxFxVersion": "Python|3.11",
+          "appSettings": [
+            {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName'))).ConnectionString]"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "python"
+            },
+            {
+              "name": "AzureWebJobsStorage__accountName",
+              "value": "[variables('storageAccountName')]"
+            },
+            {
+              "name": "COSMOS_DB_ENDPOINT",
+              "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))).documentEndpoint]"
+            },
+            {
+              "name": "KEY_VAULT_URL",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))).vaultUri]"
+            },
+            {
+              "name": "ENVIRONMENT",
+              "value": "[parameters('environment')]"
+            },
+            {
+              "name": "PROJECT_NAME",
+              "value": "MONET API"
+            }
+          ],
+          "cors": {
+            "allowedOrigins": [
+              "[concat('https://', variables('staticWebAppName'), '.azurestaticapps.net')]",
+              "http://localhost:5173",
+              "http://localhost:3000"
+            ],
+            "supportCredentials": true
+          }
+        }
+      },
+      "tags": {
+        "project": "[parameters('projectName')]"
+      }
     },
     {
-      "type": "Microsoft.Authorization/roleAssignments",
-      "apiVersion": "2020-04-01-preview",
-      "name": "[guid(resourceGroup().id, 'contributor')]",
-      "dependsOn": [
-        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'deployer-identity')]"
-      ],
+      "type": "Microsoft.Web/staticSites",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('staticWebAppName')]",
+      "location": "[parameters('staticWebAppLocation')]",
+      "sku": {
+        "name": "Free",
+        "tier": "Free"
+      },
       "properties": {
-        "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
-        "principalId": "[reference('deployer-identity').principalId]",
-        "principalType": "ServicePrincipal"
+        "repositoryUrl": "https://github.com/sundeep-dayalan/MONET",
+        "branch": "azure",
+        "buildProperties": {
+          "appLocation": "/packages/client",
+          "apiLocation": "",
+          "outputLocation": "dist"
+        }
+      },
+      "tags": {
+        "project": "[parameters('projectName')]"
       }
     }
-  ]
+  ],
+  "outputs": {
+    "functionAppName": {
+      "type": "string",
+      "value": "[variables('functionAppName')]"
+    },
+    "functionAppUrl": {
+      "type": "string",
+      "value": "[concat('https://', variables('functionAppName'), '.azurewebsites.net')]"
+    },
+    "staticWebAppName": {
+      "type": "string",
+      "value": "[variables('staticWebAppName')]"
+    },
+    "staticWebAppUrl": {
+      "type": "string",
+      "value": "[concat('https://', variables('staticWebAppName'), '.azurestaticapps.net')]"
+    },
+    "cosmosDbEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))).documentEndpoint]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))).vaultUri]"
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[resourceGroup().name]"
+    },
+    "deploymentInstructions": {
+      "type": "string",
+      "value": "✅ Infrastructure deployed successfully! Next: 1) Configure Azure AD apps manually, 2) Deploy backend/frontend code. Check the repository for detailed post-deployment steps."
+    }
+  }
 }
