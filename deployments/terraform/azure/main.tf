@@ -14,7 +14,7 @@ resource "azurerm_resource_group" "main" {
 }
 
 resource "azurerm_storage_account" "main" {
-  name                     = "sage${random_string.suffix.result}storage"
+  name                     = "monet${random_string.suffix.result}storage"
   resource_group_name      = azurerm_resource_group.main.name
   location                 = azurerm_resource_group.main.location
   account_tier             = "Standard"
@@ -31,7 +31,7 @@ resource "azurerm_storage_account" "main" {
 }
 
 resource "azurerm_cosmosdb_account" "main" {
-  name                = "sage-${random_string.suffix.result}-cosmos"
+  name                = "monet-${random_string.suffix.result}-cosmos"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   offer_type          = "Standard"
@@ -54,21 +54,21 @@ resource "azurerm_cosmosdb_account" "main" {
 }
 
 resource "azurerm_cosmosdb_sql_database" "dev" {
-  name                = "sage-dev-db"
+  name                = "monet-dev-db"
   resource_group_name = azurerm_resource_group.main.name
   account_name        = azurerm_cosmosdb_account.main.name
   throughput          = 400
 }
 
 resource "azurerm_cosmosdb_sql_database" "prod" {
-  name                = "sage-prod-db"
+  name                = "monet-prod-db"
   resource_group_name = azurerm_resource_group.main.name
   account_name        = azurerm_cosmosdb_account.main.name
   throughput          = 400
 }
 
 resource "azurerm_cosmosdb_sql_container" "dev_containers" {
-  for_each            = toset(["users", "accounts", "transactions", "plaid_tokens"])
+  for_each            = toset(["users", "banks", "transactions", "configuration"])
   name                = each.key
   resource_group_name = azurerm_resource_group.main.name
   account_name        = azurerm_cosmosdb_account.main.name
@@ -77,7 +77,7 @@ resource "azurerm_cosmosdb_sql_container" "dev_containers" {
 }
 
 resource "azurerm_cosmosdb_sql_container" "prod_containers" {
-  for_each            = toset(["users", "accounts", "transactions", "plaid_tokens"])
+  for_each            = toset(["users", "banks", "transactions", "configuration"])
   name                = each.key
   resource_group_name = azurerm_resource_group.main.name
   account_name        = azurerm_cosmosdb_account.main.name
@@ -86,7 +86,7 @@ resource "azurerm_cosmosdb_sql_container" "prod_containers" {
 }
 
 resource "azurerm_application_insights" "main" {
-  name                = "sage-${random_string.suffix.result}-insights"
+  name                = "monet-${random_string.suffix.result}-insights"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   application_type    = "web"
@@ -98,7 +98,7 @@ resource "azurerm_application_insights" "main" {
 }
 
 resource "azurerm_key_vault" "main" {
-  name                        = "sage-${random_string.suffix.result}-kv"
+  name                        = "monet-${random_string.suffix.result}-kv"
   resource_group_name         = azurerm_resource_group.main.name
   location                    = azurerm_resource_group.main.location
   sku_name                    = "standard"
@@ -131,7 +131,7 @@ resource "azurerm_role_assignment" "kv_crypto_officer" {
 }
 
 resource "azurerm_service_plan" "main" {
-  name                = "sage-${random_string.suffix.result}-plan"
+  name                = "monet-${random_string.suffix.result}-plan"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   os_type             = "Linux"
@@ -139,7 +139,7 @@ resource "azurerm_service_plan" "main" {
 }
 
 resource "azurerm_linux_function_app" "main" {
-  name                = "sage-${random_string.suffix.result}-api"
+  name                = "monet-${random_string.suffix.result}-api"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   storage_account_name = azurerm_storage_account.main.name
@@ -160,7 +160,7 @@ resource "azurerm_linux_function_app" "main" {
     "FUNCTIONS_WORKER_RUNTIME"              = "python"
     "COSMOS_DB_ENDPOINT"                    = azurerm_cosmosdb_account.main.endpoint
     "COSMOS_DB_KEY"                         = azurerm_cosmosdb_account.main.primary_key
-    "COSMOS_DB_NAME"                        = "sage-prod-db"
+    "COSMOS_DB_NAME"                        = "monet-prod-db"
     "KEY_VAULT_URL"                         = azurerm_key_vault.main.vault_uri
     "ENVIRONMENT"                           = var.environment
   }
@@ -171,7 +171,7 @@ resource "azurerm_linux_function_app" "main" {
 }
 
 resource "azurerm_static_site" "main" {
-  name                = "sage-${random_string.suffix.result}-web"
+  name                = "monet-${random_string.suffix.result}-web"
   resource_group_name = azurerm_resource_group.main.name
   location            = "Central US" # Static Web Apps are global but require a location for the staging environments
   sku_tier            = "Free"
