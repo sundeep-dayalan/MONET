@@ -328,7 +328,7 @@
       "properties": {
         "httpsOnly": true,
         "siteConfig": {
-          "linuxFxVersion": "NODE|18",
+          "linuxFxVersion": "NODE|22-lts",
           "appSettings": [
             {
               "name": "AzureWebJobsStorage",
