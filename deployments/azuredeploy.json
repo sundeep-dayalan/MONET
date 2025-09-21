@@ -313,78 +313,73 @@
       }
     },
     {
-      "type": "Microsoft.Web/sites",
-      "apiVersion": "2023-01-01",
-      "name": "[variables('functionAppName')]",
-      "location": "[parameters('location')]",
-      "kind": "functionapp,linux",
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
-      ],
-      "identity": {
-        "type": "SystemAssigned"
-      },
-      "properties": {
-        "httpsOnly": true,
-        "siteConfig": {
-          "linuxFxVersion": "NODE|~20",
-          "appSettings": [
-            {
-              "name": "AzureWebJobsStorage",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value)]"
-            },
-            {
-              "name": "FUNCTIONS_EXTENSION_VERSION",
-              "value": "~4"
-            },
-            {
-              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName'))).ConnectionString]"
-            },
-            {
-              "name": "FUNCTIONS_WORKER_RUNTIME",
-              "value": "node"
-            },
-            {
-              "name": "COSMOS_DB_ENDPOINT",
-              "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))).documentEndpoint]"
-            },
-            {
-              "name": "KEY_VAULT_URL",
-              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))).vaultUri]"
-            },
-            {
-              "name": "ENVIRONMENT",
-              "value": "[parameters('environment')]"
-            },
-            {
-              "name": "NODE_ENV",
-              "value": "production"
-            },
-            {
-              "name": "WEBSITE_NODE_DEFAULT_VERSION",
-              "value": "18.x"
-            },
-            {
-              "name": "PROJECT_NAME",
-              "value": "MONET API"
-            }
-          ],
-          "cors": {
-            "allowedOrigins": [
-              "[concat('https://', variables('staticWebAppName'), '.azurestaticapps.net')]",
-              "http://localhost:5173",
-              "http://localhost:3000"
-            ],
-            "supportCredentials": true
-          }
+  "type": "Microsoft.Web/sites",
+  "apiVersion": "2023-01-01",
+  "name": "[variables('functionAppName')]",
+  "location": "[parameters('location')]",
+  "kind": "functionapp,linux",
+  "dependsOn": [
+    "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+    "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+  ],
+  "identity": {
+    "type": "SystemAssigned"
+  },
+  "properties": {
+    "httpsOnly": true,
+    "siteConfig": {
+      "appSettings": [
+        {
+          "name": "AzureWebJobsStorage",
+          "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value)]"
+        },
+        {
+          "name": "FUNCTIONS_EXTENSION_VERSION",
+          "value": "~4"
+        },
+        {
+          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+          "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName'))).ConnectionString]"
+        },
+        {
+          "name": "FUNCTIONS_WORKER_RUNTIME",
+          "value": "node"
+        },
+        {
+          "name": "COSMOS_DB_ENDPOINT",
+          "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))).documentEndpoint]"
+        },
+        {
+          "name": "KEY_VAULT_URL",
+          "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))).vaultUri]"
+        },
+        {
+          "name": "ENVIRONMENT",
+          "value": "[parameters('environment')]"
+        },
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "PROJECT_NAME",
+          "value": "MONET API"
         }
-      },
-      "tags": {
-        "project": "[parameters('projectName')]"
+      ],
+      "cors": {
+        "allowedOrigins": [
+          "[concat('https://', variables('staticWebAppName'), '.azurestaticapps.net')]",
+          "http://localhost:5173",
+          "http://localhost:3000"
+        ],
+        "supportCredentials": true
       }
-    },
+    }
+  },
+  "tags": {
+    "project": "[parameters('projectName')]"
+  }
+},
     {
       "type": "Microsoft.Web/staticSites",
       "apiVersion": "2023-01-01",
