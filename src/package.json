@@ -1,0 +1,21 @@
+{
+  "name": "azure-function-ts-sample",
+  "version": "1.0.0",
+  "description": "A sample Node.js TypeScript Azure Function.",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "prestart": "npm run build",
+    "start": "func start",
+    "test": "echo \"No tests yet...\""
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.x",
+    "typescript": "^4.0.0",
+    "azure-functions-core-tools": "^4.x"
+  },
+  "main": "dist/functions/*.js"
+}
