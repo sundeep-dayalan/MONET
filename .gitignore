@@ -19,7 +19,6 @@ migration-storybook.log
 storybook.log
 storybook-static
 
-
 # production
 /dist
 
@@ -35,7 +34,15 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-
 # local
 mocked-db.json
+
+# Terraform
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+.terraform.tfstate.lock.info
 
