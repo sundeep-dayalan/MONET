@@ -27,7 +27,7 @@
       "defaultValue": "prod",
       "allowedValues": [
         "dev",
-        "staging", 
+        "staging",
         "prod"
       ],
       "metadata": {
@@ -63,7 +63,8 @@
     "appInsightsName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-insights')]",
     "keyVaultName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-kv')]",
     "functionAppName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-api')]",
-    "staticWebAppName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-web')]"
+    "staticWebAppName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-web')]",
+    "deploymentScript": "[concat('... Your full-deploy.sh script content goes here ...')]"
   },
   "resources": [
     {
@@ -405,7 +406,7 @@
     {
       "type": "Microsoft.Resources/deploymentScripts",
       "apiVersion": "2020-10-01",
-      "name": "postDeployScript",
+      "name": "fullDeployScript",
       "location": "[parameters('location')]",
       "kind": "AzureCLI",
       "identity": {
@@ -415,12 +416,11 @@
         }
       },
       "properties": {
-        "azCliVersion": "2.40.0",
-        "scriptContent": "[base64(variables('deploymentScript'))]",
-        "arguments": "[concat(variables('functionAppName'), ' ', variables('staticWebAppName'), ' ', variables('keyVaultName'))]",
+        "azCliVersion": "2.58.0",
+        "scriptContent": "[variables('deploymentScript')]",
+        "arguments": "[concat(parameters('projectName'), ' ', parameters('location'), ' ', parameters('environment'))]",
         "cleanupPreference": "Always",
-        "retentionInterval": "P1D",
-        "forceUpdateTag": "[parameters('forceUpdateTag')]"
+        "retentionInterval": "P1D"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
