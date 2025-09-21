@@ -39,3 +39,14 @@ yarn-error.log*
 # local
 mocked-db.json
 
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*.ntvs*
+*.njsproj
+*.sln
+*.suo
+*.ntvs*
+*.user
