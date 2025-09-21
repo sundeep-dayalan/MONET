@@ -62,7 +62,11 @@
               "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2022-09-01').keys[0].value)]"
             },
             { "name": "WEBSITE_CONTENTSHARE", "value": "[variables('functionAppName')]" }
-          ]
+          ],
+          "cors": {
+                "allowedOrigins": ["*"],
+                "supportCredentials": false
+            }
         }
       },
       "dependsOn": [

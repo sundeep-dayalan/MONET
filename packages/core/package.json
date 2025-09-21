@@ -2,7 +2,7 @@
   "name": "node-express-ts",
   "version": "1.0.0",
   "description": "Node.js + Express.js + TypeScript template project.",
-  "main": "./src/app.ts",
+    "main": "./dist/function-wrapper.js",
   "scripts": {
     "status": "tsc --p tsconfig.json --listFiles",
     "test": "jest",
