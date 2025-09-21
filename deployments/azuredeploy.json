@@ -30,6 +30,9 @@
       "apiVersion": "2020-10-01",
       "name": "runTerraformDeployment",
       "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'deployer-identity')]"
+      ],
       "kind": "AzureCLI",
       "identity": {
         "type": "UserAssigned",
@@ -60,7 +63,7 @@
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'deployer-identity')]"
       ],
       "properties": {
-        "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]", // Contributor role
+        "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
         "principalId": "[reference('deployer-identity').principalId]",
         "principalType": "ServicePrincipal"
       }
