@@ -3,7 +3,7 @@
 ## 🚀 Deploy to Azure
 
 ### Quick Deploy (Standard Tier - Always Works)
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsundeep-dayalan%2FMONET%2Fdummy%2Fdeployments%2Fazuredeploy.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsundeep-dayalan%2FMONET%2Fdummy%2Fazuredeploy%2Fazuredeploy.json)
 
 
 
