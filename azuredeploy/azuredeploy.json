@@ -149,8 +149,7 @@
       "name": "[format('{0}/web', variables('functionAppName'))]",
       "properties": {
         "repoUrl": "[parameters('repoURL')]",
-        "branch": "[parameters('branch')]",
-        "isManualIntegration": true
+        "branch": "[parameters('branch')]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
