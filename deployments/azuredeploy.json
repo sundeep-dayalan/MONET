@@ -1,0 +1,69 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": {
+      "type": "string",
+      "defaultValue": "sage",
+      "metadata": {
+        "description": "The name of the project."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "Central US",
+      "metadata": {
+        "description": "The Azure region to deploy to."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "defaultValue": "prod",
+      "metadata": {
+        "description": "The deployment environment."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deploymentScripts",
+      "apiVersion": "2020-10-01",
+      "name": "runTerraformDeployment",
+      "location": "[parameters('location')]",
+      "kind": "AzureCLI",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.ManagedIdentity/userAssignedIdentities/deployer-identity')]": {}
+        }
+      },
+      "properties": {
+        "azCliVersion": "2.30.0",
+        "scriptContent": "[concat(uri(deployment().properties.templateLink.uri, 'deploy.sh'))]",
+        "arguments": "[concat('--project-name ', parameters('projectName'), ' --location ', parameters('location'), ' --environment ', parameters('environment'))]",
+        "timeout": "PT30M",
+        "cleanupPreference": "OnSuccess",
+        "retentionInterval": "P1D"
+      }
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2018-11-30",
+      "name": "deployer-identity",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2020-04-01-preview",
+      "name": "[guid(resourceGroup().id, 'contributor')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'deployer-identity')]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]", // Contributor role
+        "principalId": "[reference('deployer-identity').principalId]",
+        "principalType": "ServicePrincipal"
+      }
+    }
+  ]
+}
