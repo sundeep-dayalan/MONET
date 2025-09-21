@@ -5,6 +5,7 @@
   "packageManager": "pnpm@10.17.0",
   "workspaces": [
     "client",
+    "core",
     "packages/*"
   ],
   "scripts": {
