@@ -1,14 +1,45 @@
-
-name: release
-
-# Temporarily disabled - no-op workflow
-on: [push]
+name: Release MONET Platform
+on:
+  push:
+    tags: ['v*']
 
 jobs:
-
-  noop:
-    if: false
+  build-and-release:
     runs-on: ubuntu-latest
     steps:
-      - name: No-op
-        run: echo "This workflow is intentionally disabled."
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js & pnpm
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - run: npm install -g pnpm
+      
+      - name: Install dependencies
+        run: pnpm install
+        
+      - name: Build packages
+        run: |
+          pnpm build
+          
+      - name: Create deployment packages
+        run: |
+          # Frontend package (static files)
+          cd packages/client
+          zip -r ../../monet-frontend.zip dist/ package.json
+          
+          # Backend package (functions-ready)
+          cd ../core
+          # Add host.json for Azure Functions
+          echo '{"version":"2.0","extensionBundle":{"id":"Microsoft.Azure.Functions.ExtensionBundle","version":"[4.*,5.0.0)"}}' > host.json
+          zip -r ../../monet-backend.zip dist/ package.json host.json
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            monet-frontend.zip
+            monet-backend.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

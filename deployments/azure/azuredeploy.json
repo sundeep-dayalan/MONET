@@ -1,0 +1,97 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appName": {
+      "type": "string", 
+      "defaultValue": "[concat('monet-', uniqueString(resourceGroup().id))]"
+    },
+    "releaseVersion": {
+      "type": "string",
+      "defaultValue": "latest"
+    }
+  },
+  "variables": {
+    "staticWebAppName": "[concat(parameters('appName'), '-web')]",
+    "functionAppName": "[concat(parameters('appName'), '-api')]",
+    "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
+    "hostingPlanName": "[concat(parameters('appName'), '-plan')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/staticSites",
+      "apiVersion": "2022-09-01",
+      "name": "[variables('staticWebAppName')]",
+      "location": "[resourceGroup().location]",
+      "sku": { "name": "Free", "tier": "Free" },
+      "properties": {
+        "repositoryUrl": "https://github.com/yourusername/MONET",
+        "branch": "main",
+        "buildProperties": {
+          "appLocation": "packages/client",
+          "outputLocation": "dist"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2022-09-01",
+      "name": "[variables('storageAccountName')]",
+      "location": "[resourceGroup().location]",
+      "sku": { "name": "Standard_LRS" },
+      "kind": "StorageV2"
+    },
+    {
+      "type": "Microsoft.Web/serverfarms", 
+      "apiVersion": "2022-09-01",
+      "name": "[variables('hostingPlanName')]",
+      "location": "[resourceGroup().location]",
+      "sku": { "name": "Y1", "tier": "Dynamic" }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-09-01", 
+      "name": "[variables('functionAppName')]",
+      "location": "[resourceGroup().location]",
+      "kind": "functionapp",
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2022-09-01').keys[0].value)]"
+            },
+            { "name": "FUNCTIONS_EXTENSION_VERSION", "value": "~4" },
+            { "name": "FUNCTIONS_WORKER_RUNTIME", "value": "node" },
+            { "name": "WEBSITE_NODE_DEFAULT_VERSION", "value": "~20" },
+            { "name": "WEBSITE_RUN_FROM_PACKAGE", "value": "1" }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites/extensions",
+      "apiVersion": "2022-09-01",
+      "name": "[concat(variables('functionAppName'), '/ZipDeploy')]", 
+      "dependsOn": ["[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"],
+      "properties": {
+        "packageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/yourusername/MONET/releases/latest/download/monet-api.zip', concat('https://github.com/yourusername/MONET/releases/download/', parameters('releaseVersion'), '/monet-api.zip'))]"
+      }
+    }
+  ],
+  "outputs": {
+    "webAppUrl": {
+      "type": "string",
+      "value": "[concat('https://', reference(variables('staticWebAppName')).defaultHostname)]"
+    },
+    "apiUrl": {
+      "type": "string", 
+      "value": "[concat('https://', reference(variables('functionAppName')).defaultHostName)]"
+    }
+  }
+}
