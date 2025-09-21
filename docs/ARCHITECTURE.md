@@ -246,3 +246,123 @@ Purpose: Project-wide configuration and metadata
 
 • Community files: README, CONTRIBUTING, CODE_OF_CONDUCT for open source success
 
+
+
+
+local-ai-assistant/
+├── .github/
+│   ├── workflows/
+│   │   ├── build-and-test.yml
+│   │   ├── release.yml
+│   │   ├── security-scan.yml
+│   │   ├── compliance-check.yml
+│   │   └── container-scan.yml
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.yml
+│   │   ├── feature_request.yml
+│   │   └── security_vulnerability.yml
+│   ├── pull_request_template.md
+│   ├── CODEOWNERS
+│   └── dependabot.yml
+│
+├── .vscode/
+│   ├── settings.json
+│   ├── extensions.json
+│   ├── launch.json
+│   └── tasks.json
+│
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── API.md
+│   ├── DEPLOYMENT.md
+│   ├── DEVELOPMENT.md
+│   ├── SECURITY.md
+│   ├── COMPLIANCE.md
+│   ├── CONTRIBUTING.md
+│   ├── CHANGELOG.md
+│   ├── CODE_OF_CONDUCT.md
+│   ├── PRIVACY-POLICY.md
+│   ├── TERMS-OF-SERVICE.md
+│   ├── SECURITY-POLICY.md
+│   ├── assets/
+│   └── examples/
+│
+├── scripts/
+│   ├── setup.sh
+│   ├── build.sh
+│   ├── test.sh
+│   ├── lint.sh
+│   ├── release.sh                # New: Automates versioning and changelog
+│   ├── security-scan.sh
+│   ├── compliance-check.sh
+│   └── docker/
+│       └── build-multi-arch.sh
+│
+├── config/
+│   ├── environments/
+│   │   ├── development.json
+│   │   ├── staging.json
+│   │   └── production.json
+│   ├── docker/
+│   │   ├── Dockerfile
+│   │   └── docker-compose.yml
+│   ├── nginx/
+│   │   └── nginx.conf
+│   └── security/
+│       ├── csp.json
+│       └── cors.json
+│
+├── packages/
+│   ├── core/                        # Backend engine
+│   │   └── src/...
+│   ├── client/                     # Frontend
+│   │   └── src/...
+│   ├── shared/                     # Shared libraries
+│   │   └── src/...
+│   ├── ai-integrations/            # AI/ML services
+│   │   └── src/...
+│   ├── desktop-wrapper/            # Desktop app
+│   │   └── src/...
+│   └── compliance/                 # Compliance libs
+│       └── src/...
+│
+├── tools/
+│   ├── build/
+│   ├── testing/
+│   │   └── coverage/               # New: Test coverage reports
+│   ├── linting/
+│   └── deployment/
+│
+├── security/
+│   ├── policies/
+│   ├── keys/
+│   ├── certificates/
+│   └── audit/
+│
+├── compliance/
+│   ├── documentation/
+│   ├── reports/                   # Compliance audit reports
+│   │   └── 2025-09-20-pci-dss.pdf
+│   └── certifications/
+│
+├── deployments/
+│   ├── docker/
+│   ├── kubernetes/
+│   └── desktop/
+│
+├── monitoring/
+│   ├── metrics/
+│   ├── logging/
+│   ├── tracing/
+│   └── alerts/
+│
+├── .gitignore
+├── .gitattributes
+├── .nvmrc
+├── .node-version
+├── package.json
+├── pnpm-workspace.yaml
+├── turbo.json
+├── README.md
+├── LICENSE
+└── pnpm-lock.yaml
