@@ -112,24 +112,36 @@ resource "azurerm_key_vault" "main" {
 
 data "azurerm_client_config" "current" {}
 
+data "azurerm_role_definition" "kv_secrets_officer" {
+  name = "Key Vault Secrets Officer"
+}
+
+data "azurerm_role_definition" "kv_crypto_user" {
+  name = "Key Vault Crypto User"
+}
+
+data "azurerm_role_definition" "kv_crypto_officer" {
+  name = "Key Vault Crypto Officer"
+}
+
 resource "azurerm_role_assignment" "kv_secrets_officer" {
-  name                 = uuid()
+  name                 = guid(azurerm_key_vault.main.id, data.azurerm_client_config.current.object_id, data.azurerm_role_definition.kv_secrets_officer.id)
   scope                = azurerm_key_vault.main.id
-  role_definition_name = "Key Vault Secrets Officer"
+  role_definition_id   = data.azurerm_role_definition.kv_secrets_officer.id
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
 resource "azurerm_role_assignment" "kv_crypto_user" {
-  name                 = uuid()
+  name                 = guid(azurerm_key_vault.main.id, data.azurerm_client_config.current.object_id, data.azurerm_role_definition.kv_crypto_user.id)
   scope                = azurerm_key_vault.main.id
-  role_definition_name = "Key Vault Crypto User"
+  role_definition_id   = data.azurerm_role_definition.kv_crypto_user.id
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
 resource "azurerm_role_assignment" "kv_crypto_officer" {
-  name                 = uuid()
+  name                 = guid(azurerm_key_vault.main.id, data.azurerm_client_config.current.object_id, data.azurerm_role_definition.kv_crypto_officer.id)
   scope                = azurerm_key_vault.main.id
-  role_definition_name = "Key Vault Crypto Officer"
+  role_definition_id   = data.azurerm_role_definition.kv_crypto_officer.id
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
