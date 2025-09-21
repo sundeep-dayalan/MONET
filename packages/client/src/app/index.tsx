@@ -1,10 +1,12 @@
-import { AppProvider } from './provider';
-import { AppRouter } from './router';
-
-export const App = () => {
+import AppProvider from '@components/providers/app-provider';
+import appRoutes from '@config/routes.config';
+import { HashRouter as Router } from 'react-router-dom';
+function App() {
   return (
-    <AppProvider>
-      <AppRouter />
-    </AppProvider>
+    <Router>
+      <AppProvider routes={appRoutes} />
+    </Router>
   );
-};
+}
+
+export default App;

@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "monorepo:dev": "turbo dev --parallel",
+    "dev": "turbo dev --parallel",
     "build": "turbo build",
     "test": "turbo test --parallel",
     "lint": "turbo lint --parallel",
