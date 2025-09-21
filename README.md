@@ -1,3 +1,39 @@
+# MONET — One-Click Azure Functions (Node.js)
+
+## 🚀 One-Click Deploy to Azure
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsundeep-dayalan%2FMONET%2Fdummy%2Fazuredeploy%2Fazuredeploy.json)
+
+What this does:
+- Provisions a Storage Account, a Consumption Plan, an Azure Functions app (Node 18), and Application Insights
+- Hooks the Function App to this GitHub repo/branch and builds from `src` using Oryx (Kudu)
+
+How to verify after deployment (3–10 minutes):
+1) In Azure Portal, open the new Function App, copy the default hostname (Overview page)
+2) Open in a browser:
+
+```
+https://<your-func-app-hostname>/api/hello?name=MONET
+```
+
+Expected response:
+
+```
+Hello, MONET! This is a Node.js TypeScript function deployed from GitHub.
+```
+
+Local development (from `src/`):
+
+```bash
+npm install
+npm start
+```
+
+Troubleshooting:
+- First request may 404 until the initial build completes; wait 1–2 minutes and retry
+- Check Function App > Deployment Center for Oryx build logs
+- Required app settings are set by the template: `FUNCTIONS_WORKER_RUNTIME=node`, `WEBSITE_NODE_DEFAULT_VERSION=~18`, `SCM_DO_BUILD_DURING_DEPLOYMENT=true`, `WEBSITE_PROJECT_PATH=src`
+
 # Monet Financial Management App
 
 ## 🚀 Deploy to Azure

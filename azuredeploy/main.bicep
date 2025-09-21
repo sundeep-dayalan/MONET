@@ -15,6 +15,8 @@ var uniqueSuffix = uniqueString(resourceGroup().id)
 var functionAppName = '${appName}-${uniqueSuffix}'
 var storageAccountName = 'st${replace(uniqueSuffix, '-', '')}' // Storage names must be alphanumeric and lowercase
 var hostingPlanName = '${appName}-plan-${uniqueSuffix}'
+var contentShareName = toLower('${functionAppName}-content')
+var appInsightsName = 'appi-${uniqueSuffix}'
 
 // Create a storage account required by the function app
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
@@ -36,6 +38,16 @@ resource hostingPlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   }
 }
 
+// Application Insights for monitoring
+resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: appInsightsName
+  location: location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+  }
+}
+
 // Create the function app
 resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
   name: functionAppName
@@ -51,6 +63,14 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
         {
           name: 'AzureWebJobsStorage'
           value: 'DefaultEndpointsProtocol=https,AccountName=${storageAccountName},AccountKey=${storageAccount.listKeys().keys[0].value}'
+        }
+        {
+          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+          value: 'DefaultEndpointsProtocol=https,AccountName=${storageAccountName},AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+        }
+        {
+          name: 'WEBSITE_CONTENTSHARE'
+          value: contentShareName
         }
         {
           name: 'WEBSITE_RUN_FROM_PACKAGE'
@@ -76,11 +96,22 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
           name: 'WEBSITE_PROJECT_PATH'
           value: 'src'
         }
+        {
+          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+          value: appInsights.properties.InstrumentationKey
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: appInsights.properties.ConnectionString
+        }
       ]
       ftpsState: 'FtpsOnly'
     }
     httpsOnly: true
   }
+  dependsOn: [
+    appInsights
+  ]
 }
 
 // Configure the function app to deploy from the specified GitHub repository
