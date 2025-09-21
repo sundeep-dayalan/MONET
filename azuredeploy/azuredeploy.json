@@ -129,6 +129,10 @@
               "value": "true"
             },
             {
+              "name": "NPM_CONFIG_PRODUCTION",
+              "value": "false"
+            },
+            {
               "name": "WEBSITE_PROJECT_PATH",
               "value": "src"
             },
