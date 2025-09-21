@@ -20,9 +20,6 @@ migration-storybook.log
 storybook.log
 storybook-static
 
-# production
-/dist
-
 # misc
 .DS_Store
 .env
