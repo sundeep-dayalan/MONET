@@ -36,7 +36,76 @@
     "deploymentScriptUri": "[uri(uri(deployment().properties.templateLink.uri, '..'), 'full-deploy.sh')]"
   },
   "resources": [
-    // ... (Your existing resources go here - Storage Account, Cosmos DB, Key Vault, Web/Static Sites) ...
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "sku": { "name": "Standard_LRS" },
+      "kind": "StorageV2",
+      "properties": {
+        "supportsHttpsTrafficOnly": true,
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false,
+        "allowSharedKeyAccess": false
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2023-04-15",
+      "name": "[variables('cosmosAccountName')]",
+      "location": "[parameters('location')]",
+      "kind": "GlobalDocumentDB",
+      "properties": {
+        "databaseAccountOfferType": "Standard",
+        "consistencyPolicy": { "defaultConsistencyLevel": "Session" },
+        "locations": [ { "locationName": "[parameters('location')]", "failoverPriority": 0 } ],
+        "capabilities": [ { "name": "EnableServerless" } ],
+        "enableFreeTier": "[parameters('tryFreeTier')]"
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-02-01",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "tenantId": "[subscription().tenantId]",
+        "sku": { "family": "A", "name": "standard" },
+        "enableRbacAuthorization": true,
+        "enableSoftDelete": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('functionAppName')]",
+      "location": "[parameters('location')]",
+      "kind": "functionapp,linux",
+      "dependsOn": [ "[variables('storageAccountName')]" ],
+      "identity": { "type": "SystemAssigned" },
+      "properties": {
+        "httpsOnly": true,
+        "siteConfig": {
+          "appSettings": [
+            { "name": "AzureWebJobsStorage", "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'), '2023-01-01').keys[0].value)]" },
+            { "name": "FUNCTIONS_WORKER_RUNTIME", "value": "node" }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Web/staticSites",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('staticWebAppName')]",
+      "location": "[parameters('staticWebAppLocation')]",
+      "sku": { "name": "Free", "tier": "Free" },
+      "properties": {
+        "repositoryUrl": "https://github.com/sundeep-dayalan/MONET",
+        "branch": "main",
+        "buildProperties": { "appLocation": "/packages/client", "apiLocation": "/packages/core", "outputLocation": "dist" }
+      }
+    },
     {
       "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
       "apiVersion": "2023-01-31",
@@ -82,5 +151,9 @@
         "[resourceId('Microsoft.Authorization/roleAssignments', variables('userAssignedIdentityName'), 'script-contributor-role-assignment')]"
       ]
     }
-  ]
+  ],
+  "outputs": {
+    "frontendUrl": { "type": "string", "value": "[concat('https://', variables('staticWebAppName'), '.azurestaticapps.net')]" },
+    "backendUrl": { "type": "string", "value": "[concat('https://', variables('functionAppName'), '.azurewebsites.net')]" }
+  }
 }
