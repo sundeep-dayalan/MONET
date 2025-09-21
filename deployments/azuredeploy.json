@@ -53,7 +53,7 @@
     "functionAppName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-api')]",
     "staticWebAppName": "[concat(parameters('projectName'), '-', variables('uniqueSuffix'), '-web')]",
     "repositoryUrl": "https://github.com/sundeep-dayalan/MONET",
-    "repositoryBranch": "main"
+    "repositoryBranch": "azure"
   },
   "resources": [
     {
