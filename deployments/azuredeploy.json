@@ -47,6 +47,13 @@
       "metadata": {
         "description": "Location for Static Web App (limited regions)"
       }
+    },
+    "tryFreeTier": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Attempt to use Cosmos DB free tier first (falls back to standard if unavailable)"
+      }
     }
   },
   "variables": {
@@ -103,7 +110,7 @@
             "name": "EnableServerless"
           }
         ],
-        "enableFreeTier": false
+        "enableFreeTier": "[parameters('tryFreeTier')]"
       },
       "tags": {
         "project": "[parameters('projectName')]"

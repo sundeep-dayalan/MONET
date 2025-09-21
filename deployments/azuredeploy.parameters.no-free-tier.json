@@ -15,7 +15,7 @@
       "value": "Central US"
     },
     "tryFreeTier": {
-      "value": true
+      "value": false
     }
   }
 }
