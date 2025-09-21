@@ -32,7 +32,7 @@
     },
     "repoURL": {
       "type": "string",
-      "defaultValue": "https://github.com/sundeep-dayalan/MONET",
+      "defaultValue": "https://github.com/sundeep-dayalan/MONET.git",
       "metadata": {
         "description": "The URL of the GitHub repository to deploy."
       }
@@ -149,7 +149,8 @@
       "name": "[format('{0}/web', variables('functionAppName'))]",
       "properties": {
         "repoUrl": "[parameters('repoURL')]",
-        "branch": "[parameters('branch')]"
+        "branch": "[parameters('branch')]",
+        "isManualIntegration": true
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
