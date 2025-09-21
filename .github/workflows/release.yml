@@ -19,82 +19,40 @@ jobs:
         run: pnpm install
         
       - name: Build packages
-        run: |
-          pnpm build
-          
-      - name: Debug - Check build outputs
-        run: |
-          echo "=== Frontend build output ==="
-          ls -la packages/client/
-          echo "=== Frontend dist directory ==="
-          ls -la packages/client/dist/ || echo "No dist directory in client"
-          echo "=== Backend build output ==="
-          ls -la packages/core/
-          echo "=== Backend dist directory ==="
-          ls -la packages/core/dist/ || echo "No dist directory in core"
+        run: pnpm build
           
       - name: Create deployment packages
         run: |
-          # Frontend package - just the built static files
+          # Create a releases directory in the root
+          mkdir -p releases
+          
+          # Frontend package
           echo "=== Creating frontend package ==="
           cd packages/client
-          if [ ! -d "dist" ]; then
-            echo "ERROR: No dist directory found in client package"
-            exit 1
-          fi
-          mkdir -p ../../frontend-deploy
-          cp -r dist/* ../../frontend-deploy/
-          cd ../../frontend-deploy
-          ls -la
+          mkdir -p ../../releases/frontend-deploy
+          cp -r dist/* ../../releases/frontend-deploy/
+          cd ../../releases/frontend-deploy
           zip -r ../monet-frontend.zip .
-          cd ..
-          echo "Frontend package created: $(ls -la monet-frontend.zip)"
+          cd ../..
+          echo "Frontend package created"
           
-          # Backend package - single Azure Function
+          # Backend package
           echo "=== Creating backend package ==="
           cd packages/core
           
-          # Check if dist directory exists
-          if [ ! -d "dist" ]; then
-            echo "ERROR: No dist directory found in core package"
-            echo "Available files:"
-            ls -la
-            exit 1
-          fi
-          
           # Create Azure Functions deployment structure
-          mkdir -p api-deploy
-          echo "Created api-deploy directory"
+          mkdir -p ../../releases/api-deploy
           
           # Copy compiled JavaScript files
-          cp -r dist/* api-deploy/
-          echo "Copied dist files to api-deploy:"
-          ls -la api-deploy/
+          cp -r dist/* ../../releases/api-deploy/
+          cp package.json ../../releases/api-deploy/
           
-          # Copy package.json
-          if [ ! -f "package.json" ]; then
-            echo "ERROR: No package.json found in core package"
-            exit 1
-          fi
-          cp package.json api-deploy/
-          echo "Copied package.json"
-          
-          cd api-deploy
-          echo "Current directory: $(pwd)"
-          echo "Files in api-deploy:"
-          ls -la
+          cd ../../releases/api-deploy
           
           # Install production dependencies
-          echo "Installing production dependencies..."
           npm install --production
-          if [ $? -ne 0 ]; then
-            echo "ERROR: npm install failed"
-            exit 1
-          fi
-          echo "Dependencies installed successfully"
           
-          # Create host.json for single function with no route prefix
-          echo "Creating host.json..."
+          # Create host.json
           cat > host.json << 'EOF'
           {
             "version": "2.0",
@@ -108,10 +66,8 @@ jobs:
             }
           }
           EOF
-          echo "host.json created"
           
-          # Create function.json for the single Express wrapper function
-          echo "Creating function directory and config..."
+          # Create function directory and config
           mkdir -p expressApp
           cat > expressApp/function.json << 'EOF'
           {
@@ -133,40 +89,25 @@ jobs:
             "scriptFile": "../function-wrapper.js"
           }
           EOF
-          echo "function.json created"
           
-          # Debug: Show final structure
-          echo "=== Final api-deploy structure ==="
-          find . -type f -name "*.js" | head -10
-          echo "=== Key files check ==="
-          ls -la function-wrapper.js || echo "WARNING: function-wrapper.js not found"
-          ls -la host.json || echo "WARNING: host.json not found"
-          ls -la expressApp/function.json || echo "WARNING: function.json not found"
+          # Create the deployment package in releases directory
+          zip -r ../monet-api.zip . -x "node_modules/.cache/*"
           
-          # Create the deployment package
-          echo "Creating ZIP package..."
-          zip -r ../../monet-api.zip . -x "node_modules/.cache/*"
-          if [ $? -ne 0 ]; then
-            echo "ERROR: Failed to create ZIP package"
-            exit 1
-          fi
-          
+          # Go back to root
           cd ../..
-          echo "Backend package created: $(ls -la monet-api.zip)"
           
-      - name: Verify packages before release
+      - name: Verify packages
         run: |
-          echo "=== Final package verification ==="
-          ls -la monet-*.zip
-          echo "Frontend package size: $(du -h monet-frontend.zip)"
-          echo "Backend package size: $(du -h monet-api.zip)"
+          echo "=== Package verification ==="
+          ls -la releases/
+          du -h releases/monet-*.zip
           
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            monet-frontend.zip
-            monet-api.zip
+            releases/monet-frontend.zip
+            releases/monet-api.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
