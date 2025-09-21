@@ -166,6 +166,10 @@
     "functionAppHostname": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName'))).defaultHostName]"
+    },
+    "helloUrl": {
+      "type": "string",
+      "value": "[format('https://{0}/api/hello?name=MONET', reference(resourceId('Microsoft.Web/sites', variables('functionAppName'))).defaultHostName)]"
     }
   }
 }
