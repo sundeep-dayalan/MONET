@@ -50,9 +50,16 @@
     "functionAppName": "[format('{0}-{1}', parameters('appName'), variables('uniqueSuffix'))]",
     "storageAccountName": "[format('st{0}', replace(variables('uniqueSuffix'), '-', ''))]",
     "hostingPlanName": "[format('{0}-plan-{1}', parameters('appName'), variables('uniqueSuffix'))]",
-    "appInsightsName": "[format('appi-{0}', variables('uniqueSuffix'))]"
+    "appInsightsName": "[format('appi-{0}', variables('uniqueSuffix'))]",
+    "scriptIdentityName": "[format('dsid-{0}', variables('uniqueSuffix'))]"
   },
   "resources": [
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[variables('scriptIdentityName')]",
+      "location": "[parameters('location')]"
+    },
     {
       "type": "Microsoft.Insights/components",
       "apiVersion": "2020-02-02",
@@ -150,9 +157,13 @@
       "location": "[parameters('location')]",
       "kind": "AzurePowerShell",
       "identity": {
-        "type": "SystemAssigned"
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('scriptIdentityName'))]": {}
+        }
       },
       "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('scriptIdentityName'))]",
         "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
       ],
       "properties": {
@@ -160,6 +171,7 @@
         "timeout": "PT30M",
         "retentionInterval": "P1D",
         "cleanupPreference": "OnSuccess",
+        "forceUpdateTag": "[parameters('deployId')]",
         "environmentVariables": [
           {
             "name": "KUDU_USER",
