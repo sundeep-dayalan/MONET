@@ -28,7 +28,7 @@
       "location": "[resourceGroup().location]",
       "sku": {"name": "Y1", "tier": "Dynamic"}
     },
-    {
+  {
       "type": "Microsoft.Web/sites",
       "apiVersion": "2022-09-01",
       "name": "[variables('functionAppName')]",
@@ -45,25 +45,18 @@
             {"name": "FUNCTIONS_EXTENSION_VERSION", "value": "~4"},
             {"name": "FUNCTIONS_WORKER_RUNTIME", "value": "node"},
             {"name": "WEBSITE_NODE_DEFAULT_VERSION", "value": "~18"},
-            {"name": "SCM_DO_BUILD_DURING_DEPLOYMENT", "value": "true"},
-            {"name": "WEBSITE_PROJECT_PATH", "value": "src"}
+            {"name": "WEBSITE_RUN_FROM_PACKAGE", "value": "1"}
           ]
         }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
-      ]
+      }
     },
     {
-      "type": "Microsoft.Web/sites/sourcecontrols",
-      "apiVersion": "2022-09-01", 
-      "name": "[concat(variables('functionAppName'), '/web')]",
+      "type": "Microsoft.Web/sites/extensions",
+      "apiVersion": "2022-09-01",
+      "name": "[concat(variables('functionAppName'), '/ZipDeploy')]",
       "dependsOn": ["[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"],
       "properties": {
-        "repoUrl": "https://github.com/sundeep-dayalan/MONET.git",
-        "branch": "main",
-        "isManualIntegration": true
+        "packageUri": "https://github.com/sundeep-dayalan/MONET/releases/latest/download/function-app.zip"
       }
     }
   ],
