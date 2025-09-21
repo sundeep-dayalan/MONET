@@ -9,8 +9,8 @@ set -e
 # Configuration
 RESOURCE_GROUP="MonetAppRG"
 TEMPLATE_FILE="azuredeploy.json"
-PARAMETERS_FILE="azuredeploy.parameters.json"
-FALLBACK_PARAMETERS_FILE="azuredeploy.parameters.no-free-tier.json"
+PARAMETERS_FILE="azuredeploy.parameters.free-tier.json"
+FALLBACK_PARAMETERS_FILE="azuredeploy.parameters.json"
 DEPLOYMENT_NAME="monet-deployment-$(date +%Y%m%d-%H%M%S)"
 
 # Colors for output

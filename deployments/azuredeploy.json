@@ -50,9 +50,9 @@
     },
     "tryFreeTier": {
       "type": "bool",
-      "defaultValue": true,
+      "defaultValue": false,
       "metadata": {
-        "description": "Attempt to use Cosmos DB free tier first (falls back to standard if unavailable)"
+        "description": "Use Cosmos DB free tier (set to true only if you don't have an existing free tier account)"
       }
     }
   },
@@ -328,7 +328,7 @@
       "properties": {
         "httpsOnly": true,
         "siteConfig": {
-          "linuxFxVersion": "Python|3.11",
+          "linuxFxVersion": "NODE|18",
           "appSettings": [
             {
               "name": "AzureWebJobsStorage",
@@ -344,7 +344,7 @@
             },
             {
               "name": "FUNCTIONS_WORKER_RUNTIME",
-              "value": "python"
+              "value": "node"
             },
             {
               "name": "COSMOS_DB_ENDPOINT",
@@ -357,6 +357,14 @@
             {
               "name": "ENVIRONMENT",
               "value": "[parameters('environment')]"
+            },
+            {
+              "name": "NODE_ENV",
+              "value": "production"
+            },
+            {
+              "name": "WEBSITE_NODE_DEFAULT_VERSION",
+              "value": "18.x"
             },
             {
               "name": "PROJECT_NAME",

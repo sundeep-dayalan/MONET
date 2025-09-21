@@ -1,6 +1,22 @@
 # Monet Financial Management App
 
+## 🚀 Deploy to Azure
+
+### Quick Deploy (Standard Tier - Always Works)
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsundeep-dayalan%2FMONET%2Fazure%2Fdeployments%2Fazuredeploy.json)
+
+**Cost**: ~$1-5/month | **Deployment**: Always succeeds | **Setup Time**: 5-10 minutes
+
+### Free Tier Deploy (If Available)
+Want to try the free tier first? Use our intelligent deployment script:
+```bash
+git clone https://github.com/sundeep-dayalan/MONET.git
+cd MONET/deployments
+./deploy-with-fallback.sh
+```
+**Cost**: ~$0.08/month (if free tier available) | **Fallback**: Automatic to standard tier
+
+---
 
 This project provides a comprehensive solution for financial management, built with a modern stack.
 
