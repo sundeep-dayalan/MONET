@@ -36,8 +36,7 @@ jobs:
           cp -r packages/client/dist/* releases/api-deploy/frontend/
           
           cd releases/api-deploy
-          sed -i.bak '/\"main\":/d' package.json || true
-          
+
           # Install production dependencies
           npm install --production
           
