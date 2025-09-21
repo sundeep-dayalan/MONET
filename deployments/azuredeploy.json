@@ -299,7 +299,7 @@
         "enableRbacAuthorization": true,
         "enableSoftDelete": true,
         "softDeleteRetentionInDays": 7,
-        "enablePurgeProtection": false
+        "enablePurgeProtection": true
       },
       "tags": {
         "project": "[parameters('projectName')]"
