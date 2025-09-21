@@ -5,11 +5,17 @@
 
 set -e
 
-# Configuration
-# This script will receive PROJECT_NAME, LOCATION, and ENVIRONMENT from the ARM template.
+# Arguments passed from ARM template
 PROJECT_NAME="$1"
-LOCATION="$2"
-ENVIRONMENT="$3"
+STORAGE_ACCOUNT_NAME="$2"
+COSMOS_ACCOUNT_NAME="$3"
+APP_INSIGHTS_NAME="$4"
+KEY_VAULT_NAME="$5"
+FUNCTION_APP_NAME="$6"
+STATIC_WEB_APP_NAME="$7"
+
+# Get current resource group name
+RESOURCE_GROUP=$(az group show --name "$AZ_RESOURCE_GROUP" --query name -o tsv)
 
 # Colors for output
 RED='\033[0;31m'
@@ -19,20 +25,10 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-# Resource names - must match ARM template variables for consistency
-UNIQUE_SUFFIX=$(echo "$RESOURCE_GROUP" | sha256sum | cut -c1-8)
-STORAGE_NAME="${PROJECT_NAME}${UNIQUE_SUFFIX}storage"
-COSMOS_NAME="${PROJECT_NAME}-${UNIQUE_SUFFIX}-cosmos"
-KEY_VAULT_NAME="${PROJECT_NAME}-${UNIQUE_SUFFIX}-kv"
-INSIGHTS_NAME="${PROJECT_NAME}-${UNIQUE_SUFFIX}-insights"
-FUNCTION_APP_NAME="${PROJECT_NAME}-${UNIQUE_SUFFIX}-api"
-STATIC_WEB_APP_NAME="${PROJECT_NAME}-${UNIQUE_SUFFIX}-web"
-
 # Variables to store Azure AD credentials for each environment
-AZURE_DEV_CLIENT_ID=""
-AZURE_DEV_CLIENT_SECRET=""
 AZURE_PROD_CLIENT_ID=""
 AZURE_PROD_CLIENT_SECRET=""
+AZURE_AD_TENANT_ID=""
 
 # Function to print colored output
 print_status() {
@@ -52,12 +48,8 @@ print_header() {
     echo -e "${CYAN} $1${NC}"
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
-# Function to check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
 
-# Function to retry Azure CLI commands with exponential backoff
+# Function to retry Azure CLI commands
 retry_az_command() {
     local max_attempts=${1:-3}
     local delay=${2:-5}
@@ -65,26 +57,17 @@ retry_az_command() {
     shift 3
     local cmd=("$@")
     local attempt=1
-    local exit_code=0
-    
     while [ $attempt -le $max_attempts ]; do
-        print_status "Attempting $operation_name (attempt $attempt/$max_attempts)..."
-        
         if "${cmd[@]}" 2>/dev/null; then
-            if [ $attempt -gt 1 ]; then
-                print_success "$operation_name succeeded on attempt $attempt"
-            fi
             return 0
         else
-            exit_code=$?
             if [ $attempt -lt $max_attempts ]; then
                 local wait_time=$((delay * attempt))
-                print_warning "$operation_name failed (attempt $attempt/$max_attempts). Retrying in ${wait_time}s..."
+                print_warning "$operation_name failed. Retrying in ${wait_time}s..."
                 sleep $wait_time
             else
-                print_error "$operation_name failed after $max_attempts attempts (exit code: $exit_code)"
-                print_error "Failed command: ${cmd[*]}"
-                return $exit_code
+                print_error "$operation_name failed after $max_attempts attempts."
+                return 1
             fi
         fi
         ((attempt++))
@@ -100,14 +83,13 @@ create_azure_ad_app() {
     
     AZURE_AD_TENANT_ID=$(az account show --query tenantId --output tsv)
     
-    # Check for existing app registration
-    local app_name="${PROJECT_NAME}-${ENVIRONMENT}-app"
+    local app_name="${PROJECT_NAME}-prod-app"
     local client_id=$(az ad app list --display-name "$app_name" --query "[?displayName=='$app_name'].appId" -o tsv 2>/dev/null)
     
     if [ -n "$client_id" ]; then
-        print_warning "Found existing app registration for $ENVIRONMENT with Client ID: $client_id. Reusing..."
+        print_warning "Found existing app registration. Reusing..."
     else
-        print_status "No existing app found for $ENVIRONMENT. Creating a new one..."
+        print_status "No existing app found. Creating a new one..."
         client_id=$(az ad app create \
             --display-name "$app_name" \
             --sign-in-audience "AzureADandPersonalMicrosoftAccount" \
@@ -130,7 +112,7 @@ create_azure_ad_app() {
     print_status "Creating a new client secret..."
     local client_secret=$(az ad app credential reset \
         --id "$client_id" \
-        --display-name "monet-${ENVIRONMENT}-client-secret" \
+        --display-name "${PROJECT_NAME}-prod-client-secret" \
         --years 2 \
         --query password \
         --output tsv)
@@ -187,7 +169,6 @@ setup_secrets() {
             --ops encrypt decrypt sign verify
         print_success "Cryptographic key created."
     fi
-
     print_success "Secrets configured!"
 }
 
@@ -196,11 +177,11 @@ configure_function_app() {
     print_header "STEP 3: FUNCTION APP CONFIGURATION"
     print_status "Configuring Function App settings..."
     
-    local cosmos_key=$(az cosmosdb keys list --name "$COSMOS_NAME" --resource-group "$RESOURCE_GROUP" --query primaryMasterKey -o tsv)
-    local cosmos_endpoint="https://${COSMOS_NAME}.documents.azure.com:443/"
-    local insights_connection=$(az monitor app-insights component show --app "$INSIGHTS_NAME" --resource-group "$RESOURCE_GROUP" --query connectionString -o tsv)
+    local cosmos_key=$(az cosmosdb keys list --name "$COSMOS_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP" --query primaryMasterKey -o tsv)
+    local cosmos_endpoint="https://${COSMOS_ACCOUNT_NAME}.documents.azure.com:443/"
+    local insights_connection=$(az monitor app-insights component show --app "$APP_INSIGHTS_NAME" --resource-group "$RESOURCE_GROUP" --query connectionString -o tsv)
     local key_vault_url="https://${KEY_VAULT_NAME}.vault.azure.net/"
-    local static_web_app_hostname=$(az staticwebapp show --name "$STATIC_WEB_APP_NAME" --resource-group "$RESOURCE_GROUP" --query defaultHostname -o tsv 2>/dev/null || echo "localhost")
+    local static_web_app_hostname=$(az staticwebapp show --name "$STATIC_WEB_APP_NAME" --resource-group "$RESOURCE_GROUP" --query defaultHostname -o tsv 2>/dev/null)
     local frontend_url="https://${static_web_app_hostname}"
     
     retry_az_command 3 10 "Configure Function App app settings" \
@@ -215,7 +196,7 @@ configure_function_app() {
             "AZURE_CLIENT_SECRET=@Microsoft.KeyVault(VaultName=${KEY_VAULT_NAME};SecretName=prod-azure-client-secret)" \
             "AZURE_TENANT_ID=@Microsoft.KeyVault(VaultName=${KEY_VAULT_NAME};SecretName=prod-azure-tenant-id)" \
             "KEY_VAULT_URL=$key_vault_url" \
-            "ENVIRONMENT=$ENVIRONMENT" \
+            "ENVIRONMENT=prod" \
             "APPLICATIONINSIGHTS_CONNECTION_STRING=$insights_connection" \
             "FUNCTIONS_WORKER_RUNTIME=node" \
             "AZURE_REDIRECT_URI=https://${FUNCTION_APP_NAME}.azurewebsites.net/api/v1/auth/oauth/microsoft/callback" \
@@ -244,10 +225,8 @@ configure_function_app() {
 # Step 4: Deploy backend code
 deploy_backend() {
     print_header "STEP 4: BACKEND DEPLOYMENT"
-    
     print_status "Deploying backend code to Function App..."
     
-    # Assuming the current working directory is the monorepo root
     cd packages/core
     
     print_status "Installing backend dependencies..."
