@@ -1,4 +1,6 @@
-name: Release MONET Platform
+name: Release MONET API
+
+# This workflow triggers when you push a new tag (e.g., v1.0.0, v1.2.3)
 on:
   push:
     tags: ['v*']
@@ -7,55 +9,66 @@ jobs:
   build-and-release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Node.js & pnpm
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-      - run: npm install -g pnpm
-      
-      - name: Install dependencies
-        run: pnpm install
-        
-      - name: Build packages
-        run: pnpm build
-          
-      - name: Create combined deployment package
-        run: |
-          mkdir -p releases/api-deploy
-          
-          # Copy backend files (compiled JavaScript)
-          echo "Copying backend files..."
-          cp -r packages/core/dist/* releases/api-deploy/
-          cp packages/core/package.json releases/api-deploy/
-          
-          # Copy frontend files to a subfolder
-          echo "Copying frontend files..."
-          mkdir -p releases/api-deploy/frontend
-          cp -r packages/client/dist/* releases/api-deploy/frontend/
-          
-          cd releases/api-deploy
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-          # Install production dependencies
-          npm install --production
+      - name: Setup Node.js and pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9 # Specify your pnpm version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'pnpm'
+
+      - name: Install root dependencies
+        run: pnpm install
+
+      - name: Build all packages (client and core)
+        run: pnpm build
+
+      - name: Create API deployment package
+        run: |
+          # 1. Create a clean staging directory for the zip contents
+          mkdir -p staging
+
+          # 2. Copy compiled backend code from its 'dist' folder to the staging root
+          echo "Copying compiled backend files..."
+          cp -r packages/core/dist/* staging/
           
-          # Create host.json
+          # 3. Copy the backend's package.json for installing prod dependencies
+          cp packages/core/package.json staging/
+          cp packages/core/package-lock.json staging/ # Important for consistent installs
+          
+          # 4. Move into the staging directory to prepare for packaging
+          cd staging
+
+          # 5. Install ONLY production dependencies for the backend
+          echo "Installing production dependencies..."
+          npm install --production
+
+          # 6. Create the host.json file required by Azure Functions
+          echo "Creating host.json..."
           cat > host.json << 'EOF'
           {
             "version": "2.0",
+            "logging": {
+              "applicationInsights": {
+                "samplingSettings": {
+                  "isEnabled": true,
+                  "excludedTypes": "Request"
+                }
+              }
+            },
             "extensionBundle": {
               "id": "Microsoft.Azure.Functions.ExtensionBundle",
               "version": "[4.*, 5.0.0)"
-            },
-            "functionTimeout": "00:05:00",
-            "http": {
-              "routePrefix": ""
             }
           }
           EOF
-          
-          # Create function directory and configuration
+
+          # 7. Create the function's directory and its function.json binding file
+          echo "Creating function configuration..."
           mkdir -p app
           cat > app/function.json << 'EOF'
           {
@@ -77,24 +90,16 @@ jobs:
             "scriptFile": "../function-wrapper.js"
           }
           EOF
+
+          # 8. Go back to the root and zip the contents of the staging directory
+          cd ..
+          echo "Zipping deployment package..."
+          zip -r monet-api.zip staging/* staging/.??*
           
-          # Verify structure
-          echo "Deployment structure:"
-          ls -la
-          echo "Frontend files:"
-          ls -la frontend/ | head -5
-          echo "Function config:"
-          ls -la app/
-          
-          # Create deployment package
-          zip -r ../monet-api.zip .
-          cd ../..
-          
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+      - name: Create GitHub Release and Upload Asset
+        uses: softprops/action-gh-release@v2
         with:
-          files: |
-            releases/monet-api.zip
+          files: monet-api.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
