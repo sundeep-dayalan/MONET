@@ -3,19 +3,23 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "appName": {
-      "type": "string", 
-      "defaultValue": "[concat('monet-', uniqueString(resourceGroup().id))]"
-    },
+    "type": "string",
+    "defaultValue": "monet",
+    "metadata": {
+      "description": "Base name for the application"
+    }
+  },
     "releaseVersion": {
       "type": "string",
       "defaultValue": "latest"
     }
   },
   "variables": {
-    "staticWebAppName": "[concat(parameters('appName'), '-web')]",
-    "functionAppName": "[concat(parameters('appName'), '-api')]",
+     "uniqueSuffix": "[uniqueString(resourceGroup().id)]",
+  "staticWebAppName": "[concat(parameters('appName'), '-web-', variables('uniqueSuffix'))]",
+  "functionAppName": "[concat(parameters('appName'), '-api-', variables('uniqueSuffix'))]",
     "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
-    "hostingPlanName": "[concat(parameters('appName'), '-plan')]"
+    "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]"
   },
   "resources": [
     {
@@ -25,7 +29,7 @@
       "location": "[resourceGroup().location]",
       "sku": { "name": "Free", "tier": "Free" },
       "properties": {
-        "repositoryUrl": "https://github.com/yourusername/MONET",
+        "repositoryUrl": "https://github.com/sundeep-dayalan/MONET",
         "branch": "main",
         "buildProperties": {
           "appLocation": "packages/client",
@@ -78,10 +82,13 @@
       "type": "Microsoft.Web/sites/extensions",
       "apiVersion": "2022-09-01",
       "name": "[concat(variables('functionAppName'), '/ZipDeploy')]", 
-      "dependsOn": ["[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"],
       "properties": {
-        "packageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/yourusername/MONET/releases/latest/download/monet-api.zip', concat('https://github.com/yourusername/MONET/releases/download/', parameters('releaseVersion'), '/monet-api.zip'))]"
-      }
+        "packageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-api.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-api.zip'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+        ]
     }
   ],
   "outputs": {
