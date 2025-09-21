@@ -1,0 +1,36 @@
+# .github/workflows/release.yml
+name: Create Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies and build
+        working-directory: ./src
+        run: |
+          npm install
+          npm run build
+          
+      - name: Create deployment package
+        run: |
+          cd src
+          zip -r ../function-app.zip . -x "node_modules/*" "*.ts" "tsconfig.json"
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: function-app.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
