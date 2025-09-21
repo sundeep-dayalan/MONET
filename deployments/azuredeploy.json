@@ -2,7 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "description": "MONET Financial Management App - Complete Azure Infrastructure Deployment",
+    "description": "MONET Financial Management App - Complete Azure Infrastructure and Code Deployment",
     "author": "MONET Development Team"
   },
   "parameters": {
@@ -50,7 +50,7 @@
     },
     "tryFreeTier": {
       "type": "bool",
-      "defaultValue": false,
+      "defaultValue": true,
       "metadata": {
         "description": "Use Cosmos DB free tier (set to true only if you don't have an existing free tier account)"
       }
@@ -153,7 +153,7 @@
         "resource": {
           "id": "users",
           "partitionKey": {
-            "paths": ["/userId"],
+            "paths": [ "/userId" ],
             "kind": "Hash"
           }
         }
@@ -170,7 +170,7 @@
         "resource": {
           "id": "accounts",
           "partitionKey": {
-            "paths": ["/userId"],
+            "paths": [ "/userId" ],
             "kind": "Hash"
           }
         }
@@ -187,7 +187,7 @@
         "resource": {
           "id": "transactions",
           "partitionKey": {
-            "paths": ["/userId"],
+            "paths": [ "/userId" ],
             "kind": "Hash"
           }
         }
@@ -204,7 +204,7 @@
         "resource": {
           "id": "plaid_tokens",
           "partitionKey": {
-            "paths": ["/userId"],
+            "paths": [ "/userId" ],
             "kind": "Hash"
           }
         }
@@ -221,7 +221,7 @@
         "resource": {
           "id": "users",
           "partitionKey": {
-            "paths": ["/userId"],
+            "paths": [ "/userId" ],
             "kind": "Hash"
           }
         }
@@ -238,7 +238,7 @@
         "resource": {
           "id": "accounts",
           "partitionKey": {
-            "paths": ["/userId"],
+            "paths": [ "/userId" ],
             "kind": "Hash"
           }
         }
@@ -255,7 +255,7 @@
         "resource": {
           "id": "transactions",
           "partitionKey": {
-            "paths": ["/userId"],
+            "paths": [ "/userId" ],
             "kind": "Hash"
           }
         }
@@ -272,7 +272,7 @@
         "resource": {
           "id": "plaid_tokens",
           "partitionKey": {
-            "paths": ["/userId"],
+            "paths": [ "/userId" ],
             "kind": "Hash"
           }
         }
@@ -313,73 +313,73 @@
       }
     },
     {
-  "type": "Microsoft.Web/sites",
-  "apiVersion": "2023-01-01",
-  "name": "[variables('functionAppName')]",
-  "location": "[parameters('location')]",
-  "kind": "functionapp,linux",
-  "dependsOn": [
-    "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-    "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
-  ],
-  "identity": {
-    "type": "SystemAssigned"
-  },
-  "properties": {
-    "httpsOnly": true,
-    "siteConfig": {
-      "appSettings": [
-        {
-          "name": "AzureWebJobsStorage",
-          "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value)]"
-        },
-        {
-          "name": "FUNCTIONS_EXTENSION_VERSION",
-          "value": "~4"
-        },
-        {
-          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-          "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName'))).ConnectionString]"
-        },
-        {
-          "name": "FUNCTIONS_WORKER_RUNTIME",
-          "value": "node"
-        },
-        {
-          "name": "COSMOS_DB_ENDPOINT",
-          "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))).documentEndpoint]"
-        },
-        {
-          "name": "KEY_VAULT_URL",
-          "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))).vaultUri]"
-        },
-        {
-          "name": "ENVIRONMENT",
-          "value": "[parameters('environment')]"
-        },
-        {
-          "name": "NODE_ENV",
-          "value": "production"
-        },
-        {
-          "name": "PROJECT_NAME",
-          "value": "MONET API"
-        }
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('functionAppName')]",
+      "location": "[parameters('location')]",
+      "kind": "functionapp,linux",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
       ],
-      "cors": {
-        "allowedOrigins": [
-          "[concat('https://', variables('staticWebAppName'), '.azurestaticapps.net')]",
-          "http://localhost:5173",
-          "http://localhost:3000"
-        ],
-        "supportCredentials": true
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "httpsOnly": true,
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value)]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~4"
+            },
+            {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName'))).ConnectionString]"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "node"
+            },
+            {
+              "name": "COSMOS_DB_ENDPOINT",
+              "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))).documentEndpoint]"
+            },
+            {
+              "name": "KEY_VAULT_URL",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))).vaultUri]"
+            },
+            {
+              "name": "ENVIRONMENT",
+              "value": "[parameters('environment')]"
+            },
+            {
+              "name": "NODE_ENV",
+              "value": "production"
+            },
+            {
+              "name": "PROJECT_NAME",
+              "value": "MONET API"
+            }
+          ],
+          "cors": {
+            "allowedOrigins": [
+              "[concat('https://', variables('staticWebAppName'), '.azurestaticapps.net')]",
+              "http://localhost:5173",
+              "http://localhost:3000"
+            ],
+            "supportCredentials": true
+          }
+        }
+      },
+      "tags": {
+        "project": "[parameters('projectName')]"
       }
-    }
-  },
-  "tags": {
-    "project": "[parameters('projectName')]"
-  }
-},
+    },
     {
       "type": "Microsoft.Web/staticSites",
       "apiVersion": "2023-01-01",
@@ -401,6 +401,32 @@
       "tags": {
         "project": "[parameters('projectName')]"
       }
+    },
+    {
+      "type": "Microsoft.Resources/deploymentScripts",
+      "apiVersion": "2020-10-01",
+      "name": "postDeployScript",
+      "location": "[parameters('location')]",
+      "kind": "AzureCLI",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat(variables('functionAppName'), '-user-identity'))]": {}
+        }
+      },
+      "properties": {
+        "azCliVersion": "2.40.0",
+        "scriptContent": "[base64(variables('deploymentScript'))]",
+        "arguments": "[concat(variables('functionAppName'), ' ', variables('staticWebAppName'), ' ', variables('keyVaultName'))]",
+        "cleanupPreference": "Always",
+        "retentionInterval": "P1D",
+        "forceUpdateTag": "[parameters('forceUpdateTag')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+        "[resourceId('Microsoft.Web/staticSites', variables('staticWebAppName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
     }
   ],
   "outputs": {
@@ -434,7 +460,7 @@
     },
     "deploymentInstructions": {
       "type": "string",
-      "value": "✅ Infrastructure deployed successfully! Next: 1) Configure Azure AD apps manually, 2) Deploy backend/frontend code. Check the repository for detailed post-deployment steps."
+      "value": "✅ Infrastructure and code deployed successfully! Check the deployment logs for the final URLs."
     }
   }
 }
