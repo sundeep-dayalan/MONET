@@ -39,6 +39,7 @@ yarn-error.log*
 # local
 mocked-db.json
 
+*.DS_Store*
 .DS_Store
 .vscode/
 .idea/

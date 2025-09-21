@@ -1,9 +1,8 @@
-import styles from './home-page.module.scss';
-import { HomePageProps } from './home-page.types';
-import logo from '@assets/images/startercraft.png';
 import Page from '@components/elements/page';
 import clsx from 'clsx';
 import React from 'react';
+import styles from './home-page.module.scss';
+import { HomePageProps } from './home-page.types';
 
 const HomePage: React.FC<HomePageProps> = ({ className, testingID }) => {
   return (
@@ -18,8 +17,7 @@ const HomePage: React.FC<HomePageProps> = ({ className, testingID }) => {
       {/* Gradient background using logo colors */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#0f172a] via-[#312e81] to-[#7420b9]" />
 
-      <img src={logo} alt="Startercraft Logo" className="w-56 h-auto drop-shadow-lg" />
-
+      
       <h1 className="text-5xl font-extrabold text-center text-white drop-shadow-md">
         Welcome to StarterCraft!
       </h1>
