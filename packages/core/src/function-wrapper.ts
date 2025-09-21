@@ -1,21 +1,38 @@
-import { app } from '@azure/functions';
-import express from 'express';
-import userRoutes from './routes/user-route';
+import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
-const expressApp = express();
-expressApp.use('/api', userRoutes);
+// Import your existing route handlers
+import { errorUser, getUsers } from './controllers/user-controller';
 
-app.http('api', {
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+// Convert Express routes to Azure Functions
+app.http('users', {
+  methods: ['GET'],
   authLevel: 'anonymous',
-  route: 'api/{*restOfPath}',
-  handler: async (request, context) => {
-    // Proxy Express app through Azure Functions
-    return await new Promise((resolve) => {
-      expressApp(request as any, {
-        status: (code: number) => ({ json: (data: any) => resolve({ status: code, jsonBody: data }) }),
-        json: (data: any) => resolve({ jsonBody: data })
-      } as any);
-    });
+  route: 'users',
+  handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    // Call your existing controller logic
+    const mockRes = {
+      status: (code: number) => ({
+        json: (data: any) => ({ status: code, jsonBody: data })
+      })
+    };
+    
+    const mockReq = {
+      // Map Azure Functions request to Express-like request
+      query: Object.fromEntries(request.query.entries()),
+      body: await request.text()
+    };
+
+    try {
+      return await getUsers(mockReq as any, mockRes as any, () => {});
+    } catch (error) {
+      return { status: 500, jsonBody: { error: 'Internal server error' } };
+    }
   }
+});
+
+app.http('usersError', {
+  methods: ['GET'],
+  authLevel: 'anonymous', 
+  route: 'users/error',
+  handler: errorUser as any
 });

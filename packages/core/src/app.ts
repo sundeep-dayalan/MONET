@@ -1,11 +1,11 @@
 // Import packages onto app
-import express from "express";
-import dotenv from "dotenv";
 import cors from "cors";
+import dotenv from "dotenv";
+import express from "express";
+import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import hpp from "hpp";
 import morgan from "morgan";
-import rateLimit from "express-rate-limit";
 
 // Setup .env variables for app usage
 dotenv.config();
@@ -14,7 +14,7 @@ dotenv.config();
 import user from "@/routes/user-route";
 
 // Setup constant variables
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8000;
 const RATE_TIME_LIMIT = Number(process.env.RATE_TIME_LIMIT) || 15;
 const RATE_REQUEST_LIMIT = Number(process.env.RATE_REQUEST_LIMIT) || 100;
 

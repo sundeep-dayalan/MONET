@@ -1,8 +1,8 @@
-import { Request, Response, NextFunction } from "express";
-import { ApiSuccess } from "@/utils/ApiSucess";
 import { asyncHandler } from "@/middleware/async-middleware";
 import { User } from "@/types/interfaces/interfaces.common";
 import { ApiError } from "@/utils/ApiError";
+import { ApiSuccess } from "@/utils/ApiSucess";
+import { NextFunction, Request, Response } from "express";
 
 // @desc     Gets all users from database
 // @route    /users
