@@ -32,7 +32,7 @@
     },
     "repoURL": {
       "type": "string",
-      "defaultValue": "https://github.com/sundeep-dayalan/MONET.git",
+      "defaultValue": "https://github.com/sundeep-dayalan/MONET",
       "metadata": {
         "description": "The URL of the GitHub repository to deploy."
       }
@@ -148,19 +148,16 @@
         "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
       ]
     },
-   {
-  "type": "Microsoft.Web/sites/sourcecontrols",
+ 
+{
+  "type": "Microsoft.Web/sites/extensions",
   "apiVersion": "2022-09-01",
-  "name": "[concat(variables('functionAppName'), '/web')]",
+  "name": "[concat(variables('functionAppName'), '/ZipDeploy')]",
   "dependsOn": [
     "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
   ],
   "properties": {
-    "repoUrl": "[parameters('repoURL')]",
-    "branch": "[parameters('branch')]",
-    "isManualIntegration": true,
-    "deploymentRollbackEnabled": false,
-    "isMercurial": false
+    "packageUri": "https://github.com/sundeep-dayalan/MONET/archive/refs/heads/dummy.zip"
   }
 }
   ],

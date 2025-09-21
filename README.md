@@ -48,7 +48,7 @@ Troubleshooting:
 ### Free Tier Deploy (If Available)
 Want to try the free tier first? Use our intelligent deployment script:
 ```bash
-git clone https://github.com/sundeep-dayalan/MONET.git
+git clone https://github.com/sundeep-dayalan/MONET
 cd MONET/deployments
 ./deploy-with-fallback.sh
 ```

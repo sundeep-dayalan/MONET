@@ -5,7 +5,7 @@ param appName string = 'fn-node-ts-gh'
 param location string = resourceGroup().location
 
 @description('The URL of the GitHub repository to deploy.')
-param repoURL string = 'https://github.com/sundeep-dayalan/MONET.git'
+param repoURL string = 'https://github.com/sundeep-dayalan/MONET'
 
 @description('The branch of the repository to deploy.')
 param branch string = 'dummy'
