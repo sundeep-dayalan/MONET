@@ -1,1 +1,13 @@
 name: release
+
+# Temporarily disabled - no-op workflow
+on: [push]
+
+jobs:
+
+  noop:
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: No-op
+        run: echo "This workflow is intentionally disabled."

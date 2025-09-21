@@ -1,2 +1,14 @@
 name: build-and-test
- 
+
+# This workflow has been turned into a no-op temporarily.
+# It keeps the file present but ensures no jobs run by using `if: false` on the only job.
+on: [push, pull_request]
+
+jobs:
+
+  noop:
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: No-op
+        run: echo "This workflow is intentionally disabled."
