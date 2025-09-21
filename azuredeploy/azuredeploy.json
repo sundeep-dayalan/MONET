@@ -25,14 +25,14 @@
     },
     "repoURL": {
       "type": "string",
-      "defaultValue": "https://github.com/<YOUR-USERNAME>/<YOUR-REPO>.git",
+      "defaultValue": "https://github.com/sundeep-dayalan/MONET.git",
       "metadata": {
         "description": "The URL of the GitHub repository to deploy."
       }
     },
     "branch": {
       "type": "string",
-      "defaultValue": "main",
+      "defaultValue": "dummy",
       "metadata": {
         "description": "The branch of the repository to deploy."
       }
