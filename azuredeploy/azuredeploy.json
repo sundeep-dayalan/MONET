@@ -16,6 +16,13 @@
         "description": "The base name for all resources. A unique string will be appended to this."
       }
     },
+    "deployId": {
+      "type": "string",
+      "defaultValue": "[utcNow('yyyyMMddHHmmss')]",
+      "metadata": {
+        "description": "Auto-generated unique value to ensure new resource names on each deployment."
+      }
+    },
     "location": {
       "type": "string",
       "defaultValue": "[resourceGroup().location]",
@@ -39,7 +46,7 @@
     }
   },
   "variables": {
-    "uniqueSuffix": "[uniqueString(resourceGroup().id)]",
+    "uniqueSuffix": "[uniqueString(resourceGroup().id, parameters('deployId'))]",
     "functionAppName": "[format('{0}-{1}', parameters('appName'), variables('uniqueSuffix'))]",
     "storageAccountName": "[format('st{0}', replace(variables('uniqueSuffix'), '-', ''))]",
     "hostingPlanName": "[format('{0}-plan-{1}', parameters('appName'), variables('uniqueSuffix'))]",
@@ -137,17 +144,6 @@
       ]
     },
     {
-      "type": "Microsoft.Web/sites/config",
-      "apiVersion": "2022-09-01",
-      "name": "[format('{0}/web', variables('functionAppName'))]",
-      "properties": {
-        "scmType": "ExternalGit"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
-      ]
-    },
-    {
       "type": "Microsoft.Web/sites/sourcecontrols",
       "apiVersion": "2022-09-01",
       "name": "[format('{0}/web', variables('functionAppName'))]",
@@ -157,8 +153,7 @@
         "isManualIntegration": true
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
-        "[resourceId('Microsoft.Web/sites/config', variables('functionAppName'), 'web')]"
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
       ]
     }
   ],
