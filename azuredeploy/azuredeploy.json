@@ -1,170 +1,76 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
-  "metadata": {
-    "_generator": {
-      "name": "bicep",
-      "version": "0.18.4.51592",
-      "templateHash": "12345678901234567890"
-    }
-  },
   "parameters": {
     "appName": {
       "type": "string",
-      "defaultValue": "fn-node-ts-gh",
-      "metadata": {
-        "description": "The base name for all resources. A unique string will be appended to this."
-      }
-    },
-    "deployId": {
-      "type": "string",
-      "defaultValue": "[utcNow('yyyyMMddHHmmss')]",
-      "metadata": {
-        "description": "Auto-generated unique value to ensure new resource names on each deployment."
-      }
-    },
-    "location": {
-      "type": "string",
-      "defaultValue": "East US 2",
-      "metadata": {
-        "description": "The location for all resources."
-      }
-    },
-    "repoURL": {
-      "type": "string",
-      "defaultValue": "https://github.com/sundeep-dayalan/MONET",
-      "metadata": {
-        "description": "The URL of the GitHub repository to deploy."
-      }
-    },
-    "branch": {
-      "type": "string",
-      "defaultValue": "dummy",
-      "metadata": {
-        "description": "The branch of the repository to deploy."
-      }
+      "defaultValue": "[concat('func-', uniqueString(resourceGroup().id))]"
     }
   },
   "variables": {
-    "uniqueSuffix": "[uniqueString(resourceGroup().id, parameters('deployId'))]",
-    "functionAppName": "[format('{0}-{1}', parameters('appName'), variables('uniqueSuffix'))]",
-    "storageAccountName": "[format('st{0}', replace(variables('uniqueSuffix'), '-', ''))]",
-    "hostingPlanName": "[format('{0}-plan-{1}', parameters('appName'), variables('uniqueSuffix'))]",
-    "appInsightsName": "[format('appi-{0}', variables('uniqueSuffix'))]"
+    "functionAppName": "[parameters('appName')]",
+    "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
+    "hostingPlanName": "[concat(parameters('appName'), '-plan')]"
   },
   "resources": [
-    
-    {
-      "type": "Microsoft.Insights/components",
-      "apiVersion": "2020-02-02",
-      "name": "[variables('appInsightsName')]",
-      "location": "[parameters('location')]",
-      "kind": "web",
-      "properties": {
-        "Application_Type": "web"
-      }
-    },
     {
       "type": "Microsoft.Storage/storageAccounts",
-      "apiVersion": "2022-09-01",
+      "apiVersion": "2022-09-01", 
       "name": "[variables('storageAccountName')]",
-      "location": "[parameters('location')]",
-      "sku": {
-        "name": "Standard_LRS"
-      },
+      "location": "[resourceGroup().location]",
+      "sku": {"name": "Standard_LRS"},
       "kind": "StorageV2"
     },
     {
       "type": "Microsoft.Web/serverfarms",
       "apiVersion": "2022-09-01",
-      "name": "[variables('hostingPlanName')]",
-      "location": "[parameters('location')]",
-      "sku": {
-        "name": "Y1",
-        "tier": "Dynamic"
-      }
+      "name": "[variables('hostingPlanName')]", 
+      "location": "[resourceGroup().location]",
+      "sku": {"name": "Y1", "tier": "Dynamic"}
     },
     {
       "type": "Microsoft.Web/sites",
       "apiVersion": "2022-09-01",
       "name": "[variables('functionAppName')]",
-      "location": "[parameters('location')]",
+      "location": "[resourceGroup().location]",
       "kind": "functionapp",
-      "identity": {
-        "type": "SystemAssigned"
-      },
       "properties": {
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
-        "httpsOnly": true,
         "siteConfig": {
           "appSettings": [
             {
               "name": "AzureWebJobsStorage",
-              "value": "[format('DefaultEndpointsProtocol=https,AccountName={0},AccountKey={1};EndpointSuffix=core.windows.net', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2022-09-01').keys[0].value)]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2022-09-01').keys[0].value)]"
             },
-            {
-              "name": "WEBSITE_RUN_FROM_PACKAGE",
-              "value": "0"
-            },
-            {
-              "name": "FUNCTIONS_EXTENSION_VERSION",
-              "value": "~4"
-            },
-            {
-              "name": "FUNCTIONS_WORKER_RUNTIME",
-              "value": "node"
-            },
-            {
-              "name": "WEBSITE_NODE_DEFAULT_VERSION",
-              "value": "~18"
-            },
-            {
-              "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
-              "value": "true"
-            },
-            {
-              "name": "NPM_CONFIG_PRODUCTION",
-              "value": "false"
-            },
-            {
-              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
-              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').InstrumentationKey]"
-            },
-            {
-              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"
-            }
-          ],
-          "ftpsState": "FtpsOnly"
+            {"name": "FUNCTIONS_EXTENSION_VERSION", "value": "~4"},
+            {"name": "FUNCTIONS_WORKER_RUNTIME", "value": "node"},
+            {"name": "WEBSITE_NODE_DEFAULT_VERSION", "value": "~18"},
+            {"name": "SCM_DO_BUILD_DURING_DEPLOYMENT", "value": "true"},
+            {"name": "WEBSITE_PROJECT_PATH", "value": "src"}
+          ]
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
         "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
       ]
     },
- 
-{
-  "type": "Microsoft.Web/sites/extensions",
-  "apiVersion": "2022-09-01",
-  "name": "[concat(variables('functionAppName'), '/ZipDeploy')]",
-  "dependsOn": [
-    "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
-  ],
-  "properties": {
-    "packageUri": "https://github.com/sundeep-dayalan/MONET/archive/refs/heads/dummy.zip"
-  }
-}
+    {
+      "type": "Microsoft.Web/sites/sourcecontrols",
+      "apiVersion": "2022-09-01", 
+      "name": "[concat(variables('functionAppName'), '/web')]",
+      "dependsOn": ["[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"],
+      "properties": {
+        "repoUrl": "https://github.com/sundeep-dayalan/MONET.git",
+        "branch": "main",
+        "isManualIntegration": true
+      }
+    }
   ],
   "outputs": {
-    "functionAppHostname": {
-      "type": "string",
-      "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName'))).defaultHostName]"
-    },
-    "helloUrl": {
-      "type": "string",
-      "value": "[format('https://{0}/api/hello?name=MONET', reference(resourceId('Microsoft.Web/sites', variables('functionAppName'))).defaultHostName)]"
+    "functionUrl": {
+      "type": "string", 
+      "value": "[concat('https://', reference(variables('functionAppName')).defaultHostName, '/api/hello')]"
     }
   }
 }
