@@ -21,48 +21,21 @@ jobs:
       - name: Build packages
         run: pnpm build
           
-      - name: Create deployment packages
+      - name: Create combined deployment package
         run: |
-          mkdir -p releases
+          mkdir -p releases/api-deploy
           
-          # Frontend package
-          echo "Creating frontend package..."
-          cd packages/client
-          mkdir -p ../../releases/frontend-deploy
-          cp -r dist/* ../../releases/frontend-deploy/
-          cd ../../releases/frontend-deploy
-          cat > web.config << 'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <configuration>
-            <system.webServer>
-              <rewrite>
-                <rules>
-                  <rule name="Handle History Mode" stopProcessing="true">
-                    <match url="(.*)" />
-                    <conditions logicalGrouping="MatchAll">
-                      <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
-                      <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
-                    </conditions>
-                    <action type="Rewrite" url="/" />
-                  </rule>
-                </rules>
-              </rewrite>
-            </system.webServer>
-          </configuration>
-          EOF
-          zip -r ../monet-frontend.zip .
-          cd ../..
+          # Copy backend files (compiled JavaScript)
+          echo "Copying backend files..."
+          cp -r packages/core/dist/* releases/api-deploy/
+          cp packages/core/package.json releases/api-deploy/
           
-          # Backend package - Azure Functions
-          echo "Creating backend package..."
-          cd packages/core
-          mkdir -p ../../releases/api-deploy
+          # Copy frontend files to a subfolder
+          echo "Copying frontend files..."
+          mkdir -p releases/api-deploy/frontend
+          cp -r packages/client/dist/* releases/api-deploy/frontend/
           
-          # Copy all compiled files to deployment directory
-          cp -r dist/* ../../releases/api-deploy/
-          cp package.json ../../releases/api-deploy/
-          
-          cd ../../releases/api-deploy
+          cd releases/api-deploy
           
           # Install production dependencies
           npm install --production
@@ -82,9 +55,9 @@ jobs:
           }
           EOF
           
-          # CRITICAL: Create the function directory and function.json
-          mkdir -p api
-          cat > api/function.json << 'EOF'
+          # Create function directory and configuration
+          mkdir -p app
+          cat > app/function.json << 'EOF'
           {
             "bindings": [
               {
@@ -105,13 +78,13 @@ jobs:
           }
           EOF
           
-          # Debug: Verify structure
-          echo "Verifying function structure:"
+          # Verify structure
+          echo "Deployment structure:"
           ls -la
-          echo "Function directory contents:"
-          ls -la api/
-          echo "Checking function-wrapper.js:"
-          ls -la function-wrapper.js
+          echo "Frontend files:"
+          ls -la frontend/ | head -5
+          echo "Function config:"
+          ls -la app/
           
           # Create deployment package
           zip -r ../monet-api.zip .
@@ -121,7 +94,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            releases/monet-frontend.zip
             releases/monet-api.zip
           generate_release_notes: true
         env:

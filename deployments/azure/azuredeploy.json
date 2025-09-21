@@ -16,8 +16,7 @@
   },
   "variables": {
     "uniqueSuffix": "[uniqueString(resourceGroup().id)]",
-    "webAppName": "[concat(parameters('appName'), '-web-', variables('uniqueSuffix'))]",
-    "functionAppName": "[concat(parameters('appName'), '-api-', variables('uniqueSuffix'))]",
+    "functionAppName": "[concat(parameters('appName'), '-app-', variables('uniqueSuffix'))]",
     "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
     "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]"
   },
@@ -35,7 +34,10 @@
       "apiVersion": "2022-09-01",
       "name": "[variables('hostingPlanName')]",
       "location": "[resourceGroup().location]",
-      "sku": { "name": "Y1", "tier": "Dynamic" }
+      "sku": { 
+        "name": "Y1", 
+        "tier": "Dynamic" 
+      }
     },
     {
       "type": "Microsoft.Web/sites",
@@ -69,19 +71,6 @@
       ]
     },
     {
-      "type": "Microsoft.Web/sites",
-      "apiVersion": "2022-09-01",
-      "name": "[variables('webAppName')]",
-      "location": "[resourceGroup().location]",
-      "kind": "app",
-      "properties": {
-        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
-      ]
-    },
-    {
       "type": "Microsoft.Web/sites/extensions",
       "apiVersion": "2022-09-01",
       "name": "[concat(variables('functionAppName'), '/ZipDeploy')]",
@@ -91,25 +80,10 @@
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
       ]
-    },
-    {
-      "type": "Microsoft.Web/sites/extensions",
-      "apiVersion": "2022-09-01",
-      "name": "[concat(variables('webAppName'), '/ZipDeploy')]",
-      "properties": {
-        "packageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-frontend.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-frontend.zip'))]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
-      ]
     }
   ],
   "outputs": {
-    "webAppUrl": {
-      "type": "string",
-      "value": "[concat('https://', reference(variables('webAppName')).defaultHostName)]"
-    },
-    "apiUrl": {
+    "appUrl": {
       "type": "string",
       "value": "[concat('https://', reference(variables('functionAppName')).defaultHostName)]"
     }
