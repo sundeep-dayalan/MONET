@@ -1,4 +1,4 @@
-# Copilot Instructions for monet-client
+# Copilot Instructions for monet-client (Client Application)
 
 ## 1. Code Generation
 - Use Plop.js for generating components, features, providers, and subcomponents.
