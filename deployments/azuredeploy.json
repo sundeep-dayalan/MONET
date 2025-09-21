@@ -103,7 +103,7 @@
             "name": "EnableServerless"
           }
         ],
-        "enableFreeTier": true
+        "enableFreeTier": false
       },
       "tags": {
         "project": "[parameters('projectName')]"
