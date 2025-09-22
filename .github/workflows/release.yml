@@ -23,6 +23,15 @@ jobs:
       - name: Build Frontend
         run: pnpm --filter monet-client build
 
+      # --- Create Frontend Deployment Package ---
+      - name: Create Client Deployment Package
+        run: |
+          echo "Creating client deployment package..."
+          cd packages/client/dist
+          zip -r ../../../monet-client.zip .
+          cd ../../../
+          echo "Client deployment package created."
+
       # --- Python Backend Packaging Step ---
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -64,7 +73,9 @@ jobs:
       - name: Create GitHub Release and Upload Asset
         uses: softprops/action-gh-release@v2
         with:
-          files: monet-api.zip
+          files: |
+            monet-api.zip
+            monet-client.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

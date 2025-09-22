@@ -18,7 +18,10 @@
     "uniqueSuffix": "[uniqueString(resourceGroup().id)]",
     "functionAppName": "[concat(parameters('appName'), '-app-', variables('uniqueSuffix'))]",
     "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
-    "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]"
+    "clientStorageAccountName": "[concat('storage', 'client', variables('uniqueSuffix'))]",
+    "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]",
+    "cdnProfileName": "[concat(parameters('appName'), '-cdn-', variables('uniqueSuffix'))]",
+    "cdnEndpointName": "[concat(parameters('appName'), '-endpoint-', variables('uniqueSuffix'))]"
   },
   "resources": [
     {
@@ -107,7 +110,9 @@
             }
           ],
           "cors": {
-            "allowedOrigins": ["*"],
+            "allowedOrigins": [
+              "*"
+            ],
             "supportCredentials": false
           }
         }
@@ -124,6 +129,84 @@
         "packageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-api.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-api.zip'))]",
         "isAsync": true
       }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2022-09-01",
+      "name": "[variables('clientStorageAccountName')]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "supportsHttpsTrafficOnly": true,
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false,
+        "staticWebsite": {
+          "enabled": true,
+          "indexDocument": "index.html",
+          "errorDocument404Path": "index.html"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('cdnProfileName')]",
+      "location": "Global",
+      "sku": {
+        "name": "Standard_Microsoft"
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/endpoints",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(variables('cdnProfileName'), '/', variables('cdnEndpointName'))]",
+      "location": "Global",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', variables('cdnProfileName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
+      ],
+      "properties": {
+        "originHostHeader": "[first(split(reference(resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName')), '2022-09-01', 'full').properties.primaryEndpoints.web, '/'))]",
+        "isHttpAllowed": false,
+        "isHttpsAllowed": true,
+        "queryStringCachingBehavior": "IgnoreQueryString",
+        "origins": [
+          {
+            "name": "[variables('clientStorageAccountName')]",
+            "properties": {
+              "hostName": "[first(split(reference(resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName')), '2022-09-01', 'full').properties.primaryEndpoints.web, '/'))]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deploymentScripts",
+      "apiVersion": "2020-10-01",
+      "name": "deployClientApp",
+      "location": "[resourceGroup().location]",
+      "kind": "AzureCLI",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('/subscriptions/{0}/resourcegroups/{1}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/cdndeployer', subscription().subscriptionId, resourceGroup().name)]": {}
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]",
+        "[resourceId('Microsoft.Cdn/profiles/endpoints', variables('cdnProfileName'), variables('cdnEndpointName'))]"
+      ],
+      "properties": {
+        "azCliVersion": "2.9.1",
+        "retentionInterval": "P1D",
+        "cleanupPreference": "OnSuccess",
+        "scriptContent": "[concat('az storage blob upload-batch --account-name ', variables('clientStorageAccountName'), ' --auth-mode key -d ''$web'' -s ''./'' --overwrite; az cdn endpoint purge -g ', resourceGroup().name, ' --profile-name ', variables('cdnProfileName'), ' --name ', variables('cdnEndpointName'), ' --content-paths ''/*''')]",
+        "primaryPackageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-client.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-client.zip'))]",
+        "forceUpdateTag": "[utcNow()]"
+      }
     }
   ],
   "outputs": {
@@ -134,6 +217,10 @@
     "functionAppName": {
       "type": "string",
       "value": "[variables('functionAppName')]"
+    },
+    "clientCdnUrl": {
+      "type": "string",
+      "value": "[concat('https://', variables('cdnEndpointName'), '.azureedge.net')]"
     }
   }
 }
