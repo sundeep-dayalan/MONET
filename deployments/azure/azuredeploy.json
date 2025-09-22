@@ -36,6 +36,10 @@
       "apiVersion": "2022-09-01",
       "name": "[variables('hostingPlanName')]",
       "location": "[resourceGroup().location]",
+      "kind": "linux",
+      "properties": {
+        "reserved": true
+      },
       "sku": {
         "name": "Y1",
         "tier": "Dynamic"
