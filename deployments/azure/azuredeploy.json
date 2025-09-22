@@ -48,14 +48,14 @@
       "properties": {
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
         "siteConfig": {
+          "pythonVersion": "3.11",
           "appSettings": [
             {
               "name": "AzureWebJobsStorage",
               "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2022-09-01').keys[0].value)]"
             },
             { "name": "FUNCTIONS_EXTENSION_VERSION", "value": "~4" },
-            { "name": "FUNCTIONS_WORKER_RUNTIME", "value": "node" },
-            { "name": "WEBSITE_NODE_DEFAULT_VERSION", "value": "~20" },
+            { "name": "FUNCTIONS_WORKER_RUNTIME", "value": "python" },
             { "name": "WEBSITE_RUN_FROM_PACKAGE", "value": "1" },
             {
               "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
