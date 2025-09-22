@@ -11,19 +11,14 @@
     },
     "releaseVersion": {
       "type": "string",
-      "defaultValue": "latest",
-      "metadata": {
-        "description": "Release version to deploy"
-      }
+      "defaultValue": "latest"
     }
-
   },
   "variables": {
     "uniqueSuffix": "[uniqueString(resourceGroup().id)]",
     "functionAppName": "[concat(parameters('appName'), '-app-', variables('uniqueSuffix'))]",
     "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
-    "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]",
-    "storageConnectionString": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2022-09-01').keys[0].value)]"
+    "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]"
   },
   "resources": [
     {
@@ -31,27 +26,19 @@
       "apiVersion": "2022-09-01",
       "name": "[variables('storageAccountName')]",
       "location": "[resourceGroup().location]",
-      "sku": { 
-        "name": "Standard_LRS" 
+      "sku": {
+        "name": "Standard_LRS"
       },
-      "kind": "StorageV2",
-      "properties": {
-        "supportsHttpsTrafficOnly": true,
-        "minimumTlsVersion": "TLS1_2"
-      }
+      "kind": "StorageV2"
     },
     {
       "type": "Microsoft.Web/serverfarms",
       "apiVersion": "2022-09-01",
       "name": "[variables('hostingPlanName')]",
       "location": "[resourceGroup().location]",
-      "sku": { 
-        "name": "Y1", 
-        "tier": "Dynamic" 
-      },
-      "kind": "functionapp",
-      "properties": {
-        "reserved": true
+      "sku": {
+        "name": "Y1",
+        "tier": "Dynamic"
       }
     },
     {
@@ -61,26 +48,17 @@
       "location": "[resourceGroup().location]",
       "kind": "functionapp,linux",
       "properties": {
-        "reserved": true,
-        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
         "httpsOnly": true,
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
         "siteConfig": {
-          "linuxFxVersion": "Python|3.11",
           "alwaysOn": false,
           "use32BitWorkerProcess": false,
           "ftpsState": "Disabled",
+          "linuxFxVersion": "Python|3.11",
           "appSettings": [
             {
               "name": "AzureWebJobsStorage",
-              "value": "[variables('storageConnectionString')]"
-            },
-            {
-              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[variables('storageConnectionString')]"
-            },
-            {
-              "name": "WEBSITE_CONTENTSHARE",
-              "value": "[variables('functionAppName')]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2022-09-01').keys[0].value)]"
             },
             {
               "name": "FUNCTIONS_EXTENSION_VERSION",
@@ -99,14 +77,20 @@
               "value": "1"
             },
             {
-              "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
-              "value": "false"
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2022-09-01').keys[0].value)]"
             },
             {
-              "name": "ENABLE_ORYX_BUILD",
-              "value": "false"
+              "name": "WEBSITE_CONTENTSHARE",
+              "value": "[variables('functionAppName')]"
             }
-          ]
+          ],
+          "cors": {
+            "allowedOrigins": [
+              "*"
+            ],
+            "supportCredentials": false
+          }
         }
       },
       "dependsOn": [
@@ -127,17 +111,9 @@
     }
   ],
   "outputs": {
-    "functionAppName": {
-      "type": "string",
-      "value": "[variables('functionAppName')]"
-    },
     "appUrl": {
       "type": "string",
-      "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', variables('functionAppName'))).defaultHostName)]"
-    },
-    "resourceGroupName": {
-      "type": "string",
-      "value": "[resourceGroup().name]"
+      "value": "[concat('https://', reference(variables('functionAppName')).defaultHostName)]"
     }
   }
 }
