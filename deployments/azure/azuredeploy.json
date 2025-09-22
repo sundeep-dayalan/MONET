@@ -154,7 +154,7 @@
         "retentionInterval": "P1D",
         "cleanupPreference": "OnSuccess",
         "timeout": "PT10M",
-        "scriptContent": "[concat('sleep 30; unzip monet-client.zip -d ./client && az storage blob upload-batch --account-name ', variables('clientStorageAccountName'), ' --auth-mode login -d ''$web'' -s ''./client'' --overwrite')]",
+        "scriptContent": "[concat('sleep 30; unzip $AZ_SCRIPTS_PRIMARY_PACKAGE_FILE_PATH -d ./client && az storage blob upload-batch --account-name ', variables('clientStorageAccountName'), ' --auth-mode login -d ''$web'' -s ''./client'' --overwrite')]",
         "primaryPackageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-client.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-client.zip'))]"
       }
     }
