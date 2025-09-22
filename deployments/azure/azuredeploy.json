@@ -121,20 +121,20 @@
       "location": "[resourceGroup().location]"
     },
     {
-      "type": "Microsoft.Authorization/roleAssignments",
-      "apiVersion": "2022-04-01",
-      "name": "[guid(variables('clientStorageAccountName'), variables('identityName'), 'roleAssignment')]",
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]",
-        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]"
-      ],
-      "properties": {
-        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
-        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')), '2023-01-31').principalId]",
-        "principalType": "ServicePrincipal",
-        "scope": "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
-      }
-    },
+  "type": "Microsoft.Authorization/roleAssignments",
+  "apiVersion": "2022-04-01",
+  "name": "[guid(resourceGroup().id, variables('identityName'), 'roleAssignment')]",
+  "dependsOn": [
+    "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]",
+    "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
+  ],
+  "properties": {
+    "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]", 
+    "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')), '2023-01-31').principalId]",
+    "principalType": "ServicePrincipal",
+    "scope": "[resourceGroup().id]"
+  }
+},
     {
       "type": "Microsoft.Resources/deploymentScripts",
       "apiVersion": "2020-10-01",
