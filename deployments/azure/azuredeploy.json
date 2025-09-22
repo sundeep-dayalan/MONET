@@ -153,8 +153,8 @@
         "azCliVersion": "2.40.0",
         "retentionInterval": "P1D",
         "cleanupPreference": "OnSuccess",
-        "timeout": "PT10M",
-        "scriptContent": "[concat('sleep 30; unzip $AZ_SCRIPTS_PRIMARY_PACKAGE_FILE_PATH -d ./client && az storage blob upload-batch --account-name ', variables('clientStorageAccountName'), ' --auth-mode login -d ''$web'' -s ''./client'' --overwrite')]",
+        "timeout": "PT30M",
+        "scriptContent": "[concat('echo \"Starting client deployment script...\"; echo \"Working directory: $(pwd)\"; echo \"Available files:\"; ls -la; echo \"Environment variables:\"; env | grep AZ_SCRIPTS; if [ -f \"$AZ_SCRIPTS_PRIMARY_PACKAGE_FILE_PATH\" ]; then echo \"Package file found at: $AZ_SCRIPTS_PRIMARY_PACKAGE_FILE_PATH\"; file \"$AZ_SCRIPTS_PRIMARY_PACKAGE_FILE_PATH\"; unzip \"$AZ_SCRIPTS_PRIMARY_PACKAGE_FILE_PATH\" -d ./client; echo \"Extraction completed. Contents:\"; ls -la ./client; az storage blob upload-batch --account-name ', variables('clientStorageAccountName'), ' --auth-mode login -d ''$web'' -s ''./client'' --overwrite; echo \"Upload completed successfully\"; else echo \"ERROR: Package file not found at $AZ_SCRIPTS_PRIMARY_PACKAGE_FILE_PATH\"; echo \"Trying alternative locations...\"; find . -name \"*.zip\" -type f; exit 1; fi')]",
         "primaryPackageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-client.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-client.zip'))]"
       }
     }
