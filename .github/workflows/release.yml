@@ -1,6 +1,5 @@
-name: Release MONET API
+name: Release MONET Platform
 
-# This workflow triggers when you push a new tag (e.g., v1.0.0, v1.2.3)
 on:
   push:
     tags: ['v*']
@@ -14,86 +13,51 @@ jobs:
 
       - name: Setup Node.js and pnpm
         uses: pnpm/action-setup@v4
-        
+      
       - uses: actions/setup-node@v4
         with:
           node-version: '20.x'
           cache: 'pnpm'
 
-      - name: Install root dependencies
+      - name: Install dependencies
         run: pnpm install
 
       - name: Build all packages (client and core)
         run: pnpm build
 
-      - name: Create API deployment package
+      - name: Create combined deployment package
         run: |
-          # 1. Create a clean staging directory for the zip contents
+          # 1. Create a clean staging directory
           mkdir -p staging
 
-          # 2. Copy compiled backend code from its 'dist' folder to the staging root
+          # 2. Copy compiled backend JS files into a 'dist' subfolder
           echo "Copying compiled backend files..."
-          cp -r packages/core/dist/* staging/
+          mkdir -p staging/dist
+          cp packages/core/dist/function-wrapper.js staging/dist/
           
-          # 3. Copy the backend's package.json for installing prod dependencies
+          # 3. Copy config files to the staging root
           cp packages/core/package.json staging/
-          cp packages/core/package-lock.json staging/ # Important for consistent installs
+          cp packages/core/host.json staging/
+          mkdir -p staging/app
+          cp packages/core/app/function.json staging/app/
           
-          # 4. Move into the staging directory to prepare for packaging
-          cd staging
+          # 4. Copy the built frontend into a 'frontend' subfolder
+          echo "Copying built frontend files..."
+          cp -r packages/client/dist staging/frontend
 
-          # 5. Install ONLY production dependencies for the backend
+          # 5. Move into the staging directory and install production dependencies
+          cd staging
           echo "Installing production dependencies..."
           npm install --production
+          
+          # 6. Verify the final structure
+          echo "Final structure in staging directory:"
+          ls -lR
 
-          # 6. Create the host.json file required by Azure Functions
-          echo "Creating host.json..."
-          cat > host.json << 'EOF'
-          {
-            "version": "2.0",
-            "logging": {
-              "applicationInsights": {
-                "samplingSettings": {
-                  "isEnabled": true,
-                  "excludedTypes": "Request"
-                }
-              }
-            },
-            "extensionBundle": {
-              "id": "Microsoft.Azure.Functions.ExtensionBundle",
-              "version": "[4.*, 5.0.0)"
-            }
-          }
-          EOF
-
-          # 7. Create the function's directory and its function.json binding file
-          echo "Creating function configuration..."
-          mkdir -p app
-          cat > app/function.json << 'EOF'
-          {
-            "bindings": [
-              {
-                "authLevel": "anonymous",
-                "type": "httpTrigger",
-                "direction": "in",
-                "name": "req",
-                "methods": ["get", "post", "put", "delete", "patch", "options"],
-                "route": "{*segments}"
-              },
-              {
-                "type": "http",
-                "direction": "out",
-                "name": "res"
-              }
-            ],
-            "scriptFile": "../function-wrapper.js"
-          }
-          EOF
-
-          # 8. Go back to the root and zip the contents of the staging directory
+          # 7. Go back to the root and zip the contents
           cd ..
           echo "Zipping deployment package..."
-          zip -r monet-api.zip staging/* staging/.??*
+          (cd staging && zip -r ../monet-api.zip ./* .??*)
           
       - name: Create GitHub Release and Upload Asset
         uses: softprops/action-gh-release@v2
