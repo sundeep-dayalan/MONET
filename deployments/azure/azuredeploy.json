@@ -244,14 +244,13 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]",
-        "[resourceId('Microsoft.Cdn/profiles/afdEndpoints/routes', variables('cdnProfileName'), variables('cdnEndpointName'), 'default-route')]"
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
       ],
       "properties": {
-        "azCliVersion": "2.9.1",
+        "azCliVersion": "2.26.0",
         "retentionInterval": "P1D",
         "cleanupPreference": "OnSuccess",
-        "scriptContent": "[concat('az storage blob upload-batch --account-name ', variables('clientStorageAccountName'), ' --auth-mode key -d ''$web'' -s ''./'' --overwrite; az afd endpoint purge -g ', resourceGroup().name, ' --profile-name ', variables('cdnProfileName'), ' --endpoint-name ', variables('cdnEndpointName'), ' --content-paths ''/*''')]",
+        "scriptContent": "[concat('az storage blob upload-batch --account-name ', variables('clientStorageAccountName'), ' --auth-mode key -d ''$web'' -s ''./'' --overwrite')]",
         "primaryPackageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-client.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-client.zip'))]"
       }
     }
