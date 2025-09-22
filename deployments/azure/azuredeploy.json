@@ -20,7 +20,8 @@
     "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
     "clientStorageAccountName": "[concat('stclient', variables('uniqueSuffix'))]",
     "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]",
-    "managedIdentityName": "[concat(parameters('appName'), '-deploy-id-', variables('uniqueSuffix'))]"
+    "managedIdentityName": "[concat(parameters('appName'), '-deploy-id-', variables('uniqueSuffix'))]",
+    "storageBlobDataContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]"
   },
   "resources": [
     {
@@ -106,7 +107,7 @@
       "properties": {
         "supportsHttpsTrafficOnly": true,
         "minimumTlsVersion": "TLS1_2",
-        "allowBlobPublicAccess": true,
+        "allowBlobPublicAccess": false,
         "staticWebsite": {
           "enabled": true,
           "indexDocument": "index.html",
@@ -129,7 +130,7 @@
         "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
       ],
       "properties": {
-        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+        "roleDefinitionId": "[variables('storageBlobDataContributorRoleId')]",
         "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').principalId]",
         "principalType": "ServicePrincipal"
       }
@@ -147,27 +148,24 @@
         }
       },
       "dependsOn": [
-        "[concat('Microsoft.Storage/storageAccounts/', variables('clientStorageAccountName'), '/providers/Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName')))]"
+        "[resourceId('Microsoft.Storage/storageAccounts/providers/roleAssignments', variables('clientStorageAccountName'), 'Microsoft.Authorization', guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName')))]"
       ],
       "properties": {
         "azCliVersion": "2.40.0",
         "retentionInterval": "P1D",
         "cleanupPreference": "OnSuccess",
-        "scriptContent": "[concat('sleep 20; az storage blob upload-batch --account-name ', variables('clientStorageAccountName'), ' --auth-mode login -d ''$web'' -s ''./'' --overwrite')]",
+        "timeout": "PT5M",
+        "scriptContent": "sleep 30 && az storage blob upload-batch --account-name [variables('clientStorageAccountName')] --auth-mode login -d '$web' -s './' --overwrite",
         "primaryPackageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-client.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-client.zip'))]"
       }
     }
   ],
   "outputs": {
-    "appUrl": {
+    "backendApiUrl": {
       "type": "string",
       "value": "[concat('https://', reference(variables('functionAppName')).defaultHostName)]"
     },
-    "functionAppName": {
-      "type": "string",
-      "value": "[variables('functionAppName')]"
-    },
-    "clientWebUrl": {
+    "frontendWebUrl": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName')), '2022-09-01').primaryEndpoints.web]"
     }
