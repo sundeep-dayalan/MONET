@@ -33,25 +33,33 @@ jobs:
         run: |
           # 1. Create a clean staging directory
           mkdir -p staging
-
-          # 2. Copy the function app code into a named directory (e.g., "api")
-          # This directory name becomes the function's name.
-          echo "Copying Python application into 'api' folder..."
-          mkdir -p staging/api
-          cp -r packages/core/app/* staging/api/
           
-          # 3. Copy host.json and requirements.txt to the root of the staging folder
+          # 2. Copy the function app code (the entire app directory becomes the function)
+          echo "Copying Python application..."
+          cp -r packages/core/app staging/
+          
+          # 3. Copy configuration files to root
           echo "Copying configuration files..."
           cp packages/core/host.json staging/
           cp packages/core/requirements.txt staging/
-
-          # 4. Verify the final structure (DO NOT RUN PIP INSTALL)
+          
+          # 4. Install Python dependencies into the staging directory
+          echo "Installing Python dependencies..."
+          pip install --target staging -r packages/core/requirements.txt
+          
+          # 5. Verify the final structure
           echo "Final structure in staging directory:"
           ls -lR staging
-
-          # 5. Zip the contents of the staging directory
-          echo "Zipping deployment package..."
-          (cd staging && zip -r ../monet-api.zip .)
+          
+          # 6. Create the deployment package
+          echo "Creating deployment package..."
+          cd staging
+          zip -r ../monet-api.zip .
+          cd ..
+          
+          # 7. Verify the zip contents
+          echo "Zip file contents:"
+          unzip -l monet-api.zip | head -20
           
       - name: Create GitHub Release and Upload Asset
         uses: softprops/action-gh-release@v2

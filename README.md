@@ -2,7 +2,7 @@
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsundeep-dayalan%2FMONET%2Fmain%2Fdeployments%2Fazure%2Fazuredeploy.json)
 
 
-git tag v1.0.16 && git push origin v1.0.16
+git tag v1.0.17 && git push origin v1.0.17
 
 
 
@@ -11,3 +11,11 @@ git tag -d v1.0.2
 git push origin :refs/tags/v1.0.2
 git tag v1.0.3
 git push origin v1.0.3
+
+
+# Create and activate a new virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Reinstall dependencies
+pip install -r requirements.txt
