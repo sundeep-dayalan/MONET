@@ -193,10 +193,10 @@
       "location": "[resourceGroup().location]"
     },
     {
+      "scope": "[format('Microsoft.Storage/storageAccounts/{0}', variables('clientStorageAccountName'))]",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "name": "[guid(variables('clientStorageAccountName'), 'BlobContributor')]",
-      "scope": "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]",
+      "name": "[guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName'))]",
       "dependsOn": [
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
@@ -208,10 +208,10 @@
       }
     },
     {
+      "scope": "[format('Microsoft.Cdn/profiles/{0}', variables('cdnProfileName'))]",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "name": "[guid(variables('cdnProfileName'), 'CDNContributor')]",
-      "scope": "[resourceId('Microsoft.Cdn/profiles', variables('cdnProfileName'))]",
+      "name": "[guid(resourceGroup().id, variables('cdnProfileName'), variables('managedIdentityName'))]",
       "dependsOn": [
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]",
         "[resourceId('Microsoft.Cdn/profiles', variables('cdnProfileName'))]"
@@ -235,8 +235,8 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Authorization/roleAssignments', guid(variables('clientStorageAccountName'), 'BlobContributor'))]",
-        "[resourceId('Microsoft.Authorization/roleAssignments', guid(variables('cdnProfileName'), 'CDNContributor'))]"
+        "[concat('Microsoft.Storage/storageAccounts/', variables('clientStorageAccountName'), '/providers/Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName')))]",
+        "[concat('Microsoft.Cdn/profiles/', variables('cdnProfileName'), '/providers/Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, variables('cdnProfileName'), variables('managedIdentityName')))]"
       ],
       "properties": {
         "azCliVersion": "2.40.0",
