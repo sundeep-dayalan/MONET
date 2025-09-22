@@ -20,7 +20,7 @@
     "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
     "clientStorageAccountName": "[concat('stclient', variables('uniqueSuffix'))]",
     "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]",
-    "identityName": "clientDeployIdentity"
+    "managedIdentityName": "[concat(parameters('appName'), '-deploy-id-', variables('uniqueSuffix'))]"
   },
   "resources": [
     {
@@ -106,7 +106,7 @@
       "properties": {
         "supportsHttpsTrafficOnly": true,
         "minimumTlsVersion": "TLS1_2",
-        "allowBlobPublicAccess": false,
+        "allowBlobPublicAccess": true,
         "staticWebsite": {
           "enabled": true,
           "indexDocument": "index.html",
@@ -117,47 +117,44 @@
     {
       "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
       "apiVersion": "2023-01-31",
-      "name": "[variables('identityName')]",
+      "name": "[variables('managedIdentityName')]",
       "location": "[resourceGroup().location]"
     },
     {
-  "type": "Microsoft.Authorization/roleAssignments",
-  "apiVersion": "2022-04-01",
-  "name": "[guid(resourceGroup().id, variables('identityName'), 'roleAssignment')]",
-  "dependsOn": [
-    "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]"
-  ],
-  "properties": {
-    "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]", 
-    "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')), '2023-01-31').principalId]",
-    "principalType": "ServicePrincipal",
-    "scope": "[resourceGroup().id]"
-  }
-}
-,
+      "type": "Microsoft.Storage/storageAccounts/providers/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[concat(variables('clientStorageAccountName'), '/Microsoft.Authorization/', guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName')))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal"
+      }
+    },
     {
       "type": "Microsoft.Resources/deploymentScripts",
       "apiVersion": "2020-10-01",
       "name": "deployClientApp",
       "location": "[resourceGroup().location]",
       "kind": "AzureCLI",
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]",
-        "[resourceId('Microsoft.Authorization/roleAssignments', guid(variables('clientStorageAccountName'), variables('identityName'), 'roleAssignment'))]"
-      ],
       "identity": {
         "type": "UserAssigned",
         "userAssignedIdentities": {
-          "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]": {}
+          "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]": {}
         }
       },
+      "dependsOn": [
+        "[concat('Microsoft.Storage/storageAccounts/', variables('clientStorageAccountName'), '/providers/Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName')))]"
+      ],
       "properties": {
         "azCliVersion": "2.40.0",
         "retentionInterval": "P1D",
         "cleanupPreference": "OnSuccess",
         "timeout": "PT10M",
-        "arguments": "--clientStorage [variables('clientStorageAccountName')]",
-        "scriptContent": "unzip monet-client.zip -d ./client && az storage blob upload-batch --account-name ${clientStorage} --auth-mode login -d '$web' -s './client' --overwrite",
+        "scriptContent": "[concat('sleep 30; unzip monet-client.zip -d ./client && az storage blob upload-batch --account-name ', variables('clientStorageAccountName'), ' --auth-mode login -d ''$web'' -s ''./client'' --overwrite')]",
         "primaryPackageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-client.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-client.zip'))]"
       }
     }
