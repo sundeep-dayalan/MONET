@@ -24,7 +24,7 @@
     "cdnEndpointName": "[concat(parameters('appName'), '-endpoint-', variables('uniqueSuffix'))]",
     "managedIdentityName": "[concat(parameters('appName'), '-deploy-id-', variables('uniqueSuffix'))]",
     "storageBlobDataContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
-    "cdnContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '426e0c7f-42b5-42c2-a5b3-214b15e1bd16')]"
+    "cdnProfileContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ec156ff8-a8d1-4d15-830c-5b80698ca432')]"
   },
   "resources": [
     {
@@ -219,7 +219,7 @@
         "[resourceId('Microsoft.Cdn/profiles', variables('cdnProfileName'))]"
       ],
       "properties": {
-        "roleDefinitionId": "[variables('cdnContributorRoleId')]",
+        "roleDefinitionId": "[variables('cdnProfileContributorRoleId')]",
         "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').principalId]",
         "principalType": "ServicePrincipal"
       }
