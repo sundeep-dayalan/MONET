@@ -21,7 +21,9 @@
     "clientStorageAccountName": "[concat('stclient', variables('uniqueSuffix'))]",
     "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]",
     "cdnProfileName": "[concat(parameters('appName'), '-cdn-', variables('uniqueSuffix'))]",
-    "cdnEndpointName": "[concat(parameters('appName'), '-endpoint-', variables('uniqueSuffix'))]"
+    "cdnEndpointName": "[concat(parameters('appName'), '-endpoint-', variables('uniqueSuffix'))]",
+    "managedIdentityName": "[concat(parameters('appName'), '-deploy-id-', variables('uniqueSuffix'))]",
+    "storageBlobDataContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]"
   },
   "resources": [
     {
@@ -29,9 +31,7 @@
       "apiVersion": "2022-09-01",
       "name": "[variables('storageAccountName')]",
       "location": "[resourceGroup().location]",
-      "sku": {
-        "name": "Standard_LRS"
-      },
+      "sku": { "name": "Standard_LRS" },
       "kind": "StorageV2",
       "properties": {
         "supportsHttpsTrafficOnly": true,
@@ -44,13 +44,8 @@
       "name": "[variables('hostingPlanName')]",
       "location": "[resourceGroup().location]",
       "kind": "linux",
-      "properties": {
-        "reserved": true
-      },
-      "sku": {
-        "name": "Y1",
-        "tier": "Dynamic"
-      }
+      "properties": { "reserved": true },
+      "sku": { "name": "Y1", "tier": "Dynamic" }
     },
     {
       "type": "Microsoft.Web/sites",
@@ -76,45 +71,19 @@
               "name": "AzureWebJobsStorage",
               "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2022-09-01').keys[0].value)]"
             },
-            {
-              "name": "FUNCTIONS_EXTENSION_VERSION",
-              "value": "~4"
-            },
-            {
-              "name": "FUNCTIONS_WORKER_RUNTIME",
-              "value": "python"
-            },
-            {
-              "name": "FUNCTIONS_WORKER_RUNTIME_VERSION",
-              "value": "3.11"
-            },
-            {
-              "name": "WEBSITE_RUN_FROM_PACKAGE",
-              "value": "1"
-            },
+            { "name": "FUNCTIONS_EXTENSION_VERSION", "value": "~4" },
+            { "name": "FUNCTIONS_WORKER_RUNTIME", "value": "python" },
+            { "name": "FUNCTIONS_WORKER_RUNTIME_VERSION", "value": "3.11" },
+            { "name": "WEBSITE_RUN_FROM_PACKAGE", "value": "1" },
             {
               "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
               "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2022-09-01').keys[0].value)]"
             },
-            {
-              "name": "WEBSITE_CONTENTSHARE",
-              "value": "[variables('functionAppName')]"
-            },
-            {
-              "name": "WEBSITE_ENABLE_SYNC_UPDATE_SITE",
-              "value": "true"
-            },
-            {
-              "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
-              "value": "false"
-            }
+            { "name": "WEBSITE_CONTENTSHARE", "value": "[variables('functionAppName')]" },
+            { "name": "WEBSITE_ENABLE_SYNC_UPDATE_SITE", "value": "true" },
+            { "name": "SCM_DO_BUILD_DURING_DEPLOYMENT", "value": "false" }
           ],
-          "cors": {
-            "allowedOrigins": [
-              "*"
-            ],
-            "supportCredentials": false
-          }
+          "cors": { "allowedOrigins": ["*"], "supportCredentials": false }
         }
       }
     },
@@ -135,9 +104,7 @@
       "apiVersion": "2022-09-01",
       "name": "[variables('clientStorageAccountName')]",
       "location": "[resourceGroup().location]",
-      "sku": {
-        "name": "Standard_LRS"
-      },
+      "sku": { "name": "Standard_LRS" },
       "kind": "StorageV2",
       "properties": {
         "supportsHttpsTrafficOnly": true,
@@ -155,9 +122,7 @@
       "apiVersion": "2023-05-01",
       "name": "[variables('cdnProfileName')]",
       "location": "Global",
-      "sku": {
-        "name": "Standard_AzureFrontDoor"
-      }
+      "sku": { "name": "Standard_AzureFrontDoor" }
     },
     {
       "type": "Microsoft.Cdn/profiles/afdEndpoints",
@@ -168,9 +133,7 @@
         "[resourceId('Microsoft.Cdn/profiles', variables('cdnProfileName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
       ],
-      "properties": {
-        "enabledState": "Enabled"
-      }
+      "properties": { "enabledState": "Enabled" }
     },
     {
       "type": "Microsoft.Cdn/profiles/originGroups",
@@ -215,20 +178,34 @@
       ],
       "properties": {
         "customDomains": [],
-        "originGroup": {
-          "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', variables('cdnProfileName'), 'default-origin-group')]"
-        },
-        "supportedProtocols": [
-          "Http",
-          "Https"
-        ],
-        "patternsToMatch": [
-          "/*"
-        ],
+        "originGroup": { "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', variables('cdnProfileName'), 'default-origin-group')]" },
+        "supportedProtocols": ["Http", "Https"],
+        "patternsToMatch": ["/*"],
         "forwardingProtocol": "HttpsOnly",
         "linkToDefaultDomain": "Enabled",
         "httpsRedirect": "Enabled",
         "enabledState": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[variables('managedIdentityName')]",
+      "location": "[resourceGroup().location]"
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[variables('storageBlobDataContributorRoleId')]",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "scope": "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
       }
     },
     {
@@ -240,17 +217,19 @@
       "identity": {
         "type": "UserAssigned",
         "userAssignedIdentities": {
-          "[format('/subscriptions/{0}/resourcegroups/{1}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/cdndeployer', subscription().subscriptionId, resourceGroup().name)]": {}
+          "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]": {}
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]",
+        "[resourceId('Microsoft.Cdn/profiles/afdEndpoints/routes', variables('cdnProfileName'), variables('cdnEndpointName'), 'default-route')]",
+        "[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName')))]"
       ],
       "properties": {
-        "azCliVersion": "2.26.0",
+        "azCliVersion": "2.40.0",
         "retentionInterval": "P1D",
         "cleanupPreference": "OnSuccess",
-        "scriptContent": "[concat('az storage blob upload-batch --account-name ', variables('clientStorageAccountName'), ' --auth-mode key -d ''$web'' -s ''./'' --overwrite')]",
+        "scriptContent": "[concat('az storage blob upload-batch --account-name ', variables('clientStorageAccountName'), ' --auth-mode login -d ''$web'' -s ''./'' --overwrite; az afd endpoint purge -g ', resourceGroup().name, ' --profile-name ', variables('cdnProfileName'), ' --endpoint-name ', variables('cdnEndpointName'), ' --content-paths ''/*''')]",
         "primaryPackageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-client.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-client.zip'))]"
       }
     }
@@ -266,7 +245,7 @@
     },
     "clientCdnUrl": {
       "type": "string",
-      "value": "[concat('https://', variables('cdnEndpointName'), '-', replace(variables('cdnProfileName'), '-', ''), '.z01.azurefd.net')]"
+      "value": "[concat('https://', reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', variables('cdnProfileName'), variables('cdnEndpointName'))).hostName)]"
     }
   }
 }
