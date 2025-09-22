@@ -22,9 +22,7 @@
     "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]",
     "cdnProfileName": "[concat(parameters('appName'), '-cdn-', variables('uniqueSuffix'))]",
     "cdnEndpointName": "[concat(parameters('appName'), '-endpoint-', variables('uniqueSuffix'))]",
-    "managedIdentityName": "[concat(parameters('appName'), '-deploy-id-', variables('uniqueSuffix'))]",
-    "storageBlobDataContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
-    "cdnProfileContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ec156ff8-a8d1-4d15-830c-5b80698ca432')]"
+    "managedIdentityName": "[concat(parameters('appName'), '-deploy-id-', variables('uniqueSuffix'))]"
   },
   "resources": [
     {
@@ -195,31 +193,31 @@
       "location": "[resourceGroup().location]"
     },
     {
-      "scope": "[format('Microsoft.Storage/storageAccounts/{0}', variables('clientStorageAccountName'))]",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "name": "[guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName'))]",
+      "name": "[guid(variables('clientStorageAccountName'), 'BlobContributor')]",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]",
       "dependsOn": [
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
       ],
       "properties": {
-        "roleDefinitionId": "[variables('storageBlobDataContributorRoleId')]",
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
         "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').principalId]",
         "principalType": "ServicePrincipal"
       }
     },
     {
-      "scope": "[format('Microsoft.Cdn/profiles/{0}', variables('cdnProfileName'))]",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "name": "[guid(resourceGroup().id, variables('cdnProfileName'), variables('managedIdentityName'))]",
+      "name": "[guid(variables('cdnProfileName'), 'CDNContributor')]",
+      "scope": "[resourceId('Microsoft.Cdn/profiles', variables('cdnProfileName'))]",
       "dependsOn": [
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]",
         "[resourceId('Microsoft.Cdn/profiles', variables('cdnProfileName'))]"
       ],
       "properties": {
-        "roleDefinitionId": "[variables('cdnProfileContributorRoleId')]",
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', 'ec156ff8-a8d1-4d15-830c-5b80698ca432')]",
         "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').principalId]",
         "principalType": "ServicePrincipal"
       }
@@ -237,8 +235,8 @@
         }
       },
       "dependsOn": [
-        "[concat('Microsoft.Storage/storageAccounts/', variables('clientStorageAccountName'), '/providers/Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName')))]",
-        "[concat('Microsoft.Cdn/profiles/', variables('cdnProfileName'), '/providers/Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, variables('cdnProfileName'), variables('managedIdentityName')))]"
+        "[resourceId('Microsoft.Authorization/roleAssignments', guid(variables('clientStorageAccountName'), 'BlobContributor'))]",
+        "[resourceId('Microsoft.Authorization/roleAssignments', guid(variables('cdnProfileName'), 'CDNContributor'))]"
       ],
       "properties": {
         "azCliVersion": "2.40.0",
