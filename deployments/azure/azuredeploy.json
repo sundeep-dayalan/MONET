@@ -11,14 +11,19 @@
     },
     "releaseVersion": {
       "type": "string",
-      "defaultValue": "latest"
-    }
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Release version to deploy"
+      }
+    },
+
   },
   "variables": {
     "uniqueSuffix": "[uniqueString(resourceGroup().id)]",
     "functionAppName": "[concat(parameters('appName'), '-app-', variables('uniqueSuffix'))]",
     "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
-    "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]"
+    "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]",
+    "storageConnectionString": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2022-09-01').keys[0].value)]"
   },
   "resources": [
     {
@@ -26,8 +31,14 @@
       "apiVersion": "2022-09-01",
       "name": "[variables('storageAccountName')]",
       "location": "[resourceGroup().location]",
-      "sku": { "name": "Standard_LRS" },
-      "kind": "StorageV2"
+      "sku": { 
+        "name": "Standard_LRS" 
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "supportsHttpsTrafficOnly": true,
+        "minimumTlsVersion": "TLS1_2"
+      }
     },
     {
       "type": "Microsoft.Web/serverfarms",
@@ -37,6 +48,10 @@
       "sku": { 
         "name": "Y1", 
         "tier": "Dynamic" 
+      },
+      "kind": "functionapp",
+      "properties": {
+        "reserved": true
       }
     },
     {
@@ -46,29 +61,52 @@
       "location": "[resourceGroup().location]",
       "kind": "functionapp,linux",
       "properties": {
-         "reserved": true,
+        "reserved": true,
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "httpsOnly": true,
         "siteConfig": {
-        "linuxFxVersion": "Python|3.11",
+          "linuxFxVersion": "Python|3.11",
+          "alwaysOn": false,
+          "use32BitWorkerProcess": false,
+          "ftpsState": "Disabled",
           "appSettings": [
             {
               "name": "AzureWebJobsStorage",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2022-09-01').keys[0].value)]"
+              "value": "[variables('storageConnectionString')]"
             },
-             { "name": "FUNCTIONS_EXTENSION_VERSION", "value": "~4" },
-            { "name": "FUNCTIONS_WORKER_RUNTIME", "value": "python" },           
-            { "name": "FUNCTIONS_WORKER_RUNTIME_VERSION", "value": "3.11" },     
-            { "name": "WEBSITE_RUN_FROM_PACKAGE", "value": "1" },
             {
               "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2022-09-01').keys[0].value)]"
+              "value": "[variables('storageConnectionString')]"
             },
-            { "name": "WEBSITE_CONTENTSHARE", "value": "[variables('functionAppName')]" }
-          ],
-          "cors": {
-                "allowedOrigins": ["*"],
-                "supportCredentials": false
+            {
+              "name": "WEBSITE_CONTENTSHARE",
+              "value": "[variables('functionAppName')]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~4"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "python"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME_VERSION",
+              "value": "3.11"
+            },
+            {
+              "name": "WEBSITE_RUN_FROM_PACKAGE",
+              "value": "1"
+            },
+            {
+              "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+              "value": "false"
+            },
+            {
+              "name": "ENABLE_ORYX_BUILD",
+              "value": "false"
             }
+          ]
         }
       },
       "dependsOn": [
@@ -89,9 +127,17 @@
     }
   ],
   "outputs": {
+    "functionAppName": {
+      "type": "string",
+      "value": "[variables('functionAppName')]"
+    },
     "appUrl": {
       "type": "string",
-      "value": "[concat('https://', reference(variables('functionAppName')).defaultHostName)]"
+      "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', variables('functionAppName'))).defaultHostName)]"
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[resourceGroup().name]"
     }
   }
 }
