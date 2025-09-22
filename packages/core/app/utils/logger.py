@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Dict, Any
 
-from ..settings import settings
+# from ..settings import settings
 
 
 def get_logging_config() -> Dict[str, Any]:
@@ -29,14 +29,12 @@ def get_logging_config() -> Dict[str, Any]:
         "handlers": {
             "console": {
                 "class": "logging.StreamHandler",
-                "level": settings.log_level,
                 "formatter": "default",
                 "stream": sys.stdout,
             },
         },
         "loggers": {
             "": {  # root logger
-                "level": settings.log_level,
                 "handlers": ["console"],
                 "propagate": False,
             },
@@ -48,23 +46,23 @@ def get_logging_config() -> Dict[str, Any]:
         },
     }
 
-    # Add file handler if log file is specified
-    if settings.log_file:
-        log_file_path = Path(settings.log_file)
-        log_file_path.parent.mkdir(parents=True, exist_ok=True)
+    # # Add file handler if log file is specified
+    # if settings.log_file:
+    #     log_file_path = Path(settings.log_file)
+    #     log_file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        config["handlers"]["file"] = {
-            "class": "logging.handlers.RotatingFileHandler",
-            "level": settings.log_level,
-            "formatter": "detailed",
-            "filename": str(log_file_path),
-            "maxBytes": 10485760,  # 10MB
-            "backupCount": 5,
-        }
+    #     config["handlers"]["file"] = {
+    #         "class": "logging.handlers.RotatingFileHandler",
+    #         "level": settings.log_level,
+    #         "formatter": "detailed",
+    #         "filename": str(log_file_path),
+    #         "maxBytes": 10485760,  # 10MB
+    #         "backupCount": 5,
+    #     }
 
-        # Add file handler to all loggers
-        for logger_config in config["loggers"].values():
-            logger_config["handlers"].append("file")
+    #     # Add file handler to all loggers
+    #     for logger_config in config["loggers"].values():
+    #         logger_config["handlers"].append("file")
 
     return config
 
