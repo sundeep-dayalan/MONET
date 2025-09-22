@@ -121,10 +121,9 @@
       "location": "[resourceGroup().location]"
     },
     {
-      "type": "Microsoft.Authorization/roleAssignments",
+      "type": "Microsoft.Storage/storageAccounts/providers/roleAssignments",
       "apiVersion": "2022-04-01",
-      "name": "[guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName'))]",
-      "scope": "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]",
+      "name": "[concat(variables('clientStorageAccountName'), '/Microsoft.Authorization/', guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName')))]",
       "dependsOn": [
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
@@ -148,7 +147,7 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName')))]"
+        "[concat('Microsoft.Storage/storageAccounts/', variables('clientStorageAccountName'), '/providers/Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName')))]"
       ],
       "properties": {
         "azCliVersion": "2.40.0",
