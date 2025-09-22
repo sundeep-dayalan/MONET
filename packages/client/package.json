@@ -1,5 +1,5 @@
 {
-  "name": "monet",
+  "name": "monet-client",
   "private": true,
   "version": "0.0.0",
   "type": "module",
