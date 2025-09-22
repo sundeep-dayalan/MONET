@@ -34,28 +34,22 @@ jobs:
           # 1. Create a clean staging directory
           mkdir -p staging
 
-          # 2. Copy the entire Python app folder from the core package
-          echo "Copying Python backend application..."
-          cp -r packages/core/app/* staging/
+          # 2. Copy the function app code into a named directory (e.g., "api")
+          # This directory name becomes the function's name.
+          echo "Copying Python application into 'api' folder..."
+          mkdir -p staging/api
+          cp -r packages/core/app/* staging/api/
           
-          # 3. Copy backend configuration files
+          # 3. Copy host.json and requirements.txt to the root of the staging folder
+          echo "Copying configuration files..."
           cp packages/core/host.json staging/
           cp packages/core/requirements.txt staging/
-          cp packages/core/local.settings.json staging/
-          
-          # 4. Copy the built frontend into a 'frontend' subfolder
-          echo "Copying built frontend files..."
-          cp -r packages/client/dist staging/frontend
 
-          # 5. Install Python dependencies directly into the staging folder
-          echo "Installing production Python dependencies..."
-          pip install --target="./staging" -r ./staging/requirements.txt
-
-          # 6. Verify the final structure
+          # 4. Verify the final structure (DO NOT RUN PIP INSTALL)
           echo "Final structure in staging directory:"
           ls -lR staging
 
-          # 7. Zip the contents of the staging directory
+          # 5. Zip the contents of the staging directory
           echo "Zipping deployment package..."
           (cd staging && zip -r ../monet-api.zip .)
           
