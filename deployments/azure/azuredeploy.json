@@ -151,13 +151,13 @@
       }
     },
     {
-      "type": "Microsoft.Cdn/profiles",
-      "apiVersion": "2023-05-01",
-      "name": "[variables('cdnProfileName')]",
-      "location": "Global",
-      "sku": {
-        "name": "Standard_Akamai"
-      }
+        "type": "Microsoft.Cdn/profiles",
+        "apiVersion": "2023-05-01",
+        "name": "[variables('cdnProfileName')]",
+        "location": "Global",
+        "sku": {
+                "name": "Standard_AzureFrontDoor"
+            }
     },
     {
       "type": "Microsoft.Cdn/profiles/endpoints",
