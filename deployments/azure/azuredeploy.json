@@ -18,7 +18,7 @@
     "uniqueSuffix": "[uniqueString(resourceGroup().id)]",
     "functionAppName": "[concat(parameters('appName'), '-app-', variables('uniqueSuffix'))]",
     "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
-    "clientStorageAccountName": "[concat('storage', 'client', variables('uniqueSuffix'))]",
+    "clientStorageAccountName": "[concat('stclient', variables('uniqueSuffix'))]",
     "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]",
     "cdnProfileName": "[concat(parameters('appName'), '-cdn-', variables('uniqueSuffix'))]",
     "cdnEndpointName": "[concat(parameters('appName'), '-endpoint-', variables('uniqueSuffix'))]"
