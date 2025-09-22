@@ -151,16 +151,16 @@
       }
     },
     {
-        "type": "Microsoft.Cdn/profiles",
-        "apiVersion": "2023-05-01",
-        "name": "[variables('cdnProfileName')]",
-        "location": "Global",
-        "sku": {
-                "name": "Standard_AzureFrontDoor"
-            }
+      "type": "Microsoft.Cdn/profiles",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('cdnProfileName')]",
+      "location": "Global",
+      "sku": {
+        "name": "Standard_AzureFrontDoor"
+      }
     },
     {
-      "type": "Microsoft.Cdn/profiles/endpoints",
+      "type": "Microsoft.Cdn/profiles/afdEndpoints",
       "apiVersion": "2023-05-01",
       "name": "[concat(variables('cdnProfileName'), '/', variables('cdnEndpointName'))]",
       "location": "Global",
@@ -169,18 +169,66 @@
         "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
       ],
       "properties": {
-        "originHostHeader": "[first(split(reference(resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName')), '2022-09-01', 'full').properties.primaryEndpoints.web, '/'))]",
-        "isHttpAllowed": false,
-        "isHttpsAllowed": true,
-        "queryStringCachingBehavior": "IgnoreQueryString",
-        "origins": [
-          {
-            "name": "[variables('clientStorageAccountName')]",
-            "properties": {
-              "hostName": "[first(split(reference(resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName')), '2022-09-01', 'full').properties.primaryEndpoints.web, '/'))]"
-            }
-          }
-        ]
+        "enabledState": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(variables('cdnProfileName'), '/default-origin-group')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', variables('cdnProfileName'))]"
+      ],
+      "properties": {
+        "loadBalancingSettings": {
+          "sampleSize": 4,
+          "successfulSamplesRequired": 3,
+          "additionalLatencyInMilliseconds": 50
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups/origins",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(variables('cdnProfileName'), '/default-origin-group/', variables('clientStorageAccountName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', variables('cdnProfileName'), 'default-origin-group')]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
+      ],
+      "properties": {
+        "hostName": "[replace(replace(reference(resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName')), '2022-09-01').primaryEndpoints.web, 'https://', ''), '/', '')]",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "originHostHeader": "[replace(replace(reference(resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName')), '2022-09-01').primaryEndpoints.web, 'https://', ''), '/', '')]",
+        "priority": 1,
+        "weight": 1000,
+        "enabledState": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(variables('cdnProfileName'), '/', variables('cdnEndpointName'), '/default-route')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', variables('cdnProfileName'), variables('cdnEndpointName'))]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', variables('cdnProfileName'), 'default-origin-group', variables('clientStorageAccountName'))]"
+      ],
+      "properties": {
+        "customDomains": [],
+        "originGroup": {
+          "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', variables('cdnProfileName'), 'default-origin-group')]"
+        },
+        "supportedProtocols": [
+          "Http",
+          "Https"
+        ],
+        "patternsToMatch": [
+          "/*"
+        ],
+        "forwardingProtocol": "HttpsOnly",
+        "linkToDefaultDomain": "Enabled",
+        "httpsRedirect": "Enabled",
+        "enabledState": "Enabled"
       }
     },
     {
@@ -197,13 +245,13 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]",
-        "[resourceId('Microsoft.Cdn/profiles/endpoints', variables('cdnProfileName'), variables('cdnEndpointName'))]"
+        "[resourceId('Microsoft.Cdn/profiles/afdEndpoints/routes', variables('cdnProfileName'), variables('cdnEndpointName'), 'default-route')]"
       ],
       "properties": {
         "azCliVersion": "2.9.1",
         "retentionInterval": "P1D",
         "cleanupPreference": "OnSuccess",
-        "scriptContent": "[concat('az storage blob upload-batch --account-name ', variables('clientStorageAccountName'), ' --auth-mode key -d ''$web'' -s ''./'' --overwrite; az cdn endpoint purge -g ', resourceGroup().name, ' --profile-name ', variables('cdnProfileName'), ' --name ', variables('cdnEndpointName'), ' --content-paths ''/*''')]",
+        "scriptContent": "[concat('az storage blob upload-batch --account-name ', variables('clientStorageAccountName'), ' --auth-mode key -d ''$web'' -s ''./'' --overwrite; az afd endpoint purge -g ', resourceGroup().name, ' --profile-name ', variables('cdnProfileName'), ' --endpoint-name ', variables('cdnEndpointName'), ' --content-paths ''/*''')]",
         "primaryPackageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-client.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-client.zip'))]",
         "forceUpdateTag": "[utcNow()]"
       }
@@ -220,7 +268,7 @@
     },
     "clientCdnUrl": {
       "type": "string",
-      "value": "[concat('https://', variables('cdnEndpointName'), '.azureedge.net')]"
+      "value": "[concat('https://', variables('cdnEndpointName'), '-', replace(variables('cdnProfileName'), '-', ''), '.z01.azurefd.net')]"
     }
   }
 }
