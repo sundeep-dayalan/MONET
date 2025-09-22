@@ -147,9 +147,7 @@
           "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]": {}
         }
       },
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts/providers/roleAssignments', variables('clientStorageAccountName'), 'Microsoft.Authorization', guid(resourceGroup().id, variables('clientStorageAccountName'), variables('managedIdentityName')))]"
-      ],
+     
       "properties": {
         "azCliVersion": "2.40.0",
         "retentionInterval": "P1D",
