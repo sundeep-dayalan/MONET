@@ -1,5 +1,5 @@
 """
-FastAPI application for Sage.
+FastAPI application for Monet.
 Version: 2.0.3 - Production Ready with Microsoft Entra ID Only
 
 A streamlined financial management API focused on:
@@ -78,7 +78,7 @@ def get_session_secret() -> str:
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
-    logger.info("Starting Sage API...")
+    logger.info("Starting Monet API...")
 
     # Skip CosmosDB connection in test environment
     # if settings.environment != "test":
@@ -95,7 +95,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
-    logger.info("Shutting down Sage API...")
+    logger.info("Shutting down Monet API...")
 
     # if settings.environment != "test":
     #     try:

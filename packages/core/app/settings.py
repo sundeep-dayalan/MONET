@@ -13,7 +13,7 @@
 #     """Application settings."""
 
 #     # API Settings
-#     project_name: str = Field(default="Sage API", env="PROJECT_NAME")
+#     project_name: str = Field(default="Monet API", env="PROJECT_NAME")
 #     version: str = Field(default="2.0.2", env="VERSION")
 #     api_v1_prefix: str = Field(default="/api/v1", env="API_V1_PREFIX")
 #     debug: bool = Field(default=False, env="DEBUG")
@@ -51,7 +51,7 @@
 #     # CosmosDB Configuration
 #     cosmos_db_endpoint: str = Field(..., env="COSMOS_DB_ENDPOINT")
 #     cosmos_db_key: str = Field(..., env="COSMOS_DB_KEY")
-#     cosmos_db_name: str = Field(default="sage-db", env="COSMOS_DB_NAME")
+#     cosmos_db_name: str = Field(default="monet-db", env="COSMOS_DB_NAME")
 
 #     # Microsoft Entra ID OAuth Configuration
 #     azure_client_id: str = Field(default="test-client-id", env="AZURE_CLIENT_ID")
