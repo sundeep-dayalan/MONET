@@ -12,28 +12,14 @@
     "releaseVersion": {
       "type": "string",
       "defaultValue": "latest"
-    },
-    "repositoryUrl": {
-      "type": "string",
-      "defaultValue": "https://github.com/sundeep-dayalan/MONET",
-      "metadata": {
-        "description": "GitHub repository URL for the source code"
-      }
-    },
-    "repositoryBranch": {
-      "type": "string",
-      "defaultValue": "main",
-      "metadata": {
-        "description": "Branch to deploy from"
-      }
     }
   },
   "variables": {
     "uniqueSuffix": "[uniqueString(resourceGroup().id)]",
     "functionAppName": "[concat(parameters('appName'), '-app-', variables('uniqueSuffix'))]",
     "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
-    "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]",
-    "staticWebAppName": "[concat(parameters('appName'), '-swa-', variables('uniqueSuffix'))]"
+    "clientStorageAccountName": "[concat('stclient', variables('uniqueSuffix'))]",
+    "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]"
   },
   "resources": [
     {
@@ -110,22 +96,55 @@
       }
     },
     {
-      "type": "Microsoft.Web/staticSites",
+      "type": "Microsoft.Storage/storageAccounts",
       "apiVersion": "2022-09-01",
-      "name": "[variables('staticWebAppName')]",
-      "location": "Central US",
-      "sku": {
-        "name": "Free",
-        "tier": "Free"
-      },
+      "name": "[variables('clientStorageAccountName')]",
+      "location": "[resourceGroup().location]",
+      "sku": { "name": "Standard_LRS" },
+      "kind": "StorageV2",
       "properties": {
-        "repositoryUrl": "[parameters('repositoryUrl')]",
-        "branch": "[parameters('repositoryBranch')]",
-        "buildProperties": {
-          "appLocation": "/client",
-          "apiLocation": "",
-          "outputLocation": "build"
+        "supportsHttpsTrafficOnly": true,
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": true,
+        "staticWebsite": {
+          "enabled": true,
+          "indexDocument": "index.html",
+          "errorDocument404Path": "index.html"
         }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deploymentScripts",
+      "apiVersion": "2020-10-01",
+      "name": "deployClientApp",
+      "location": "[resourceGroup().location]",
+      "kind": "AzureCLI",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
+      ],
+      "properties": {
+        "azCliVersion": "2.50.0",
+        "retentionInterval": "P1D",
+        "cleanupPreference": "OnSuccess",
+        "timeout": "PT30M",
+        "environmentVariables": [
+          {
+            "name": "STORAGE_ACCOUNT_NAME",
+            "value": "[variables('clientStorageAccountName')]"
+          },
+          {
+            "name": "RESOURCE_GROUP_NAME",
+            "value": "[resourceGroup().name]"
+          },
+          {
+            "name": "PACKAGE_URL",
+            "value": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-client.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-client.zip'))]"
+          }
+        ],
+        "scriptContent": "#!/bin/bash\nset -e\n\necho \"Starting client deployment...\"\necho \"Package URL: $PACKAGE_URL\"\necho \"Storage Account: $STORAGE_ACCOUNT_NAME\"\n\n# Download the client package\necho \"Downloading client package...\"\ncurl -L \"$PACKAGE_URL\" -o monet-client.zip\necho \"Download completed. File size: $(ls -lh monet-client.zip | awk '{print $5}')\"\n\n# Extract the package\necho \"Extracting package...\"\nunzip -q monet-client.zip -d ./client\necho \"Extraction completed.\"\n\n# List contents to verify\necho \"Package contents:\"\nfind ./client -type f | head -20\n\n# Get storage account key\necho \"Getting storage account key...\"\nSTORAGE_KEY=$(az storage account keys list --account-name $STORAGE_ACCOUNT_NAME --resource-group $RESOURCE_GROUP_NAME --query '[0].value' -o tsv)\n\n# Upload files to $web container\necho \"Uploading files to blob storage...\"\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --account-key $STORAGE_KEY \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --content-type 'text/html' \\\n  --pattern '*.html'\n\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --account-key $STORAGE_KEY \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --content-type 'application/javascript' \\\n  --pattern '*.js'\n\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --account-key $STORAGE_KEY \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --content-type 'text/css' \\\n  --pattern '*.css'\n\n# Upload remaining files\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --account-key $STORAGE_KEY \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --exclude-pattern '*.html;*.js;*.css'\n\necho \"Client deployment completed successfully!\""
       }
     }
   ],
@@ -136,11 +155,7 @@
     },
     "frontendWebUrl": {
       "type": "string",
-      "value": "[concat('https://', reference(variables('staticWebAppName')).defaultHostname)]"
-    },
-    "staticWebAppDeploymentToken": {
-      "type": "string",
-      "value": "[listSecrets(resourceId('Microsoft.Web/staticSites', variables('staticWebAppName')), '2022-09-01').properties.apiKey]"
+      "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName')), '2022-09-01').primaryEndpoints.web]"
     }
   }
 }
