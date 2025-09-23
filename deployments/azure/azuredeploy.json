@@ -9,27 +9,6 @@
         "description": "Base name for the application"
       }
     },
-    {
-      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-      "apiVersion": "2023-01-31",
-      "name": "[variables('managedIdentityName')]",
-      "location": "[resourceGroup().location]"
-    },
-    {
-      "type": "Microsoft.Authorization/roleAssignments",
-      "apiVersion": "2022-04-01",
-      "name": "[guid(resourceGroup().id, variables('clientStorageAccountName'), 'StorageBlobDataContributor')]",
-      "dependsOn": [
-        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
-      ],
-      "properties": {
-        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
-        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').principalId]",
-        "principalType": "ServicePrincipal"
-      },
-      "scope": "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
-    },
     "releaseVersion": {
       "type": "string",
       "defaultValue": "latest"
@@ -39,11 +18,17 @@
     "uniqueSuffix": "[uniqueString(resourceGroup().id)]",
     "functionAppName": "[concat(parameters('appName'), '-app-', variables('uniqueSuffix'))]",
     "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
-    "clientStorageAccountName": "[concat('stclient', variables('uniqueSuffix'))]",
     "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]",
-    "managedIdentityName": "[concat(parameters('appName'), '-deploy-id-', variables('uniqueSuffix'))]"
+    "managedIdentityName": "[concat(parameters('appName'), '-deploy-id-', variables('uniqueSuffix'))]",
+    "staticWebAppName": "[concat(parameters('appName'), '-swa-', variables('uniqueSuffix'))]"
   },
   "resources": [
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[variables('managedIdentityName')]",
+      "location": "[resourceGroup().location]"
+    },
     {
       "type": "Microsoft.Storage/storageAccounts",
       "apiVersion": "2022-09-01",
@@ -76,18 +61,15 @@
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
       ],
       "properties": {
-        "reserved": true,
         "httpsOnly": true,
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
         "siteConfig": {
-          "alwaysOn": false,
-          "use32BitWorkerProcess": false,
           "ftpsState": "Disabled",
           "linuxFxVersion": "Python|3.11",
           "appSettings": [
             {
               "name": "AzureWebJobsStorage",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2022-09-01').keys[0].value)]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2022-09-01').keys[0].value)]"
             },
             { "name": "FUNCTIONS_EXTENSION_VERSION", "value": "~4" },
             { "name": "FUNCTIONS_WORKER_RUNTIME", "value": "python" },
@@ -95,44 +77,50 @@
             { "name": "WEBSITE_RUN_FROM_PACKAGE", "value": "1" },
             {
               "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2022-09-01').keys[0].value)]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2022-09-01').keys[0].value)]"
             },
             { "name": "WEBSITE_CONTENTSHARE", "value": "[variables('functionAppName')]" },
             { "name": "WEBSITE_ENABLE_SYNC_UPDATE_SITE", "value": "true" },
             { "name": "SCM_DO_BUILD_DURING_DEPLOYMENT", "value": "false" }
-          ],
-          "cors": { "allowedOrigins": ["*"], "supportCredentials": false }
+          ]
         }
       }
     },
     {
       "type": "Microsoft.Web/sites/extensions",
-      "apiVersion": "2022-09-01",
-      "name": "[concat(variables('functionAppName'), '/ZipDeploy')]",
+      "apiVersion": "2019-08-01",
+      "name": "[concat(variables('functionAppName'), '/zipdeploy')]",
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
       ],
       "properties": {
-        "packageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-api.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-api.zip'))]",
-        "isAsync": true
+        "packageUri": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-api.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-api.zip'))]"
       }
     },
     {
-      "type": "Microsoft.Storage/storageAccounts",
-      "apiVersion": "2022-09-01",
-      "name": "[variables('clientStorageAccountName')]",
-      "location": "[resourceGroup().location]",
-      "sku": { "name": "Standard_LRS" },
-      "kind": "StorageV2",
+      "type": "Microsoft.Web/staticSites",
+      "apiVersion": "2022-03-01",
+      "name": "[variables('staticWebAppName')]",
+      "location": "Central US",
+      "sku": { "name": "Free", "tier": "Free" },
       "properties": {
-        "supportsHttpsTrafficOnly": true,
-        "minimumTlsVersion": "TLS1_2",
-        "allowBlobPublicAccess": true,
-        "staticWebsite": {
-          "enabled": true,
-          "indexDocument": "index.html",
-          "errorDocument404Path": "index.html"
-        }
+        "stagingEnvironmentPolicy": "Disabled",
+        "allowConfigFileUpdates": true
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, variables('staticWebAppName'), 'Contributor')]",
+      "scope": "[resourceId('Microsoft.Web/staticSites', variables('staticWebAppName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]",
+        "[resourceId('Microsoft.Web/staticSites', variables('staticWebAppName'))]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal"
       }
     },
     {
@@ -148,8 +136,8 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]",
-        "[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, variables('clientStorageAccountName'), 'StorageBlobDataContributor'))]"
+        "[resourceId('Microsoft.Web/staticSites', variables('staticWebAppName'))]",
+        "[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, variables('staticWebAppName'), 'Contributor'))]"
       ],
       "properties": {
         "azCliVersion": "2.50.0",
@@ -158,8 +146,8 @@
         "timeout": "PT30M",
         "environmentVariables": [
           {
-            "name": "STORAGE_ACCOUNT_NAME",
-            "value": "[variables('clientStorageAccountName')]"
+            "name": "STATIC_WEB_APP_NAME",
+            "value": "[variables('staticWebAppName')]"
           },
           {
             "name": "RESOURCE_GROUP_NAME",
@@ -170,19 +158,18 @@
             "value": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-client.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-client.zip'))]"
           }
         ],
-        "scriptContent": "#!/bin/bash\nset -e\n\necho \"Starting client deployment...\"\necho \"Package URL: $PACKAGE_URL\"\necho \"Storage Account: $STORAGE_ACCOUNT_NAME\"\n\n# Download the client package\necho \"Downloading client package...\"\ncurl -L \"$PACKAGE_URL\" -o monet-client.zip\necho \"Download completed. File size: $(ls -lh monet-client.zip | awk '{print $5}')\"\n\n# Extract the package\necho \"Extracting package...\"\nunzip -q monet-client.zip -d ./client\necho \"Extraction completed.\"\n\n# List contents to verify\necho \"Package contents:\"\nfind ./client -type f | head -20\n\n# Upload files to $web container using managed identity
-echo \"Uploading files to blob storage...\"\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --auth-mode login \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --content-type 'text/html' \\\n  --pattern '*.html'\n\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --auth-mode login \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --content-type 'application/javascript' \\\n  --pattern '*.js'\n\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --auth-mode login \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --content-type 'text/css' \\\n  --pattern '*.css'\n\n# Upload remaining files\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --auth-mode login \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --exclude-pattern '*.html;*.js;*.css'\n\necho \"Client deployment completed successfully!\""
+  "scriptContent": "#!/bin/bash\nset -euo pipefail\n\necho 'Starting Static Web App client deployment...'\necho \"Package URL: $PACKAGE_URL\"\necho \"Static Web App: $STATIC_WEB_APP_NAME\"\n\n# Install Node.js and SWA CLI\necho 'Installing Node.js and SWA CLI...'\napt-get update -y > /dev/null 2>&1 || true\napt-get install -y curl unzip ca-certificates > /dev/null 2>&1\ncurl -fsSL https://deb.nodesource.com/setup_18.x | bash -\napt-get install -y nodejs > /dev/null 2>&1\nnpm i -g @azure/static-web-apps-cli@2 > /dev/null 2>&1\n\n# Download the client package\necho 'Downloading client package...'\ncurl -L \"$PACKAGE_URL\" -o monet-client.zip\necho \"Download completed. File size: $(ls -lh monet-client.zip | awk '{print $5}')\"\n\n# Extract the package\necho 'Extracting package...'\nrm -rf ./client\nunzip -q monet-client.zip -d ./client\necho 'Extraction completed.'\n\n# Ensure SPA fallback config exists (if not provided in artifact)\nif [ ! -f ./client/staticwebapp.config.json ]; then\n  cat > ./client/staticwebapp.config.json << 'EOF'\n{\n  \"navigationFallback\": {\n    \"rewrite\": \"/index.html\"\n  }\n}\nEOF\nfi\n\n# Obtain a short-lived deployment token using the managed identity's RBAC\necho 'Acquiring deployment token...'\naz extension add -n staticwebapp -y > /dev/null 2>&1 || az extension update -n staticwebapp > /dev/null 2>&1\nTOKEN=$(az staticwebapp secrets list --name \"$STATIC_WEB_APP_NAME\" --resource-group \"$RESOURCE_GROUP_NAME\" --query 'properties.apiKey' -o tsv)\nif [ -z \"$TOKEN\" ]; then\n  echo 'Failed to acquire deployment token'\n  exit 1\nfi\n\n# Deploy using SWA CLI (production environment)\necho 'Deploying to Azure Static Web Apps (production)...'\nSWA_CLI_DEPLOYMENT_TOKEN=\"$TOKEN\" swa deploy ./client --env production --app-name \"$STATIC_WEB_APP_NAME\"\n\necho 'Client deployment completed successfully!'"
       }
     }
   ],
   "outputs": {
     "backendApiUrl": {
       "type": "string",
-      "value": "[concat('https://', reference(variables('functionAppName')).defaultHostName)]"
+      "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2022-09-01').defaultHostName)]"
     },
     "frontendWebUrl": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName')), '2022-09-01').primaryEndpoints.web]"
+      "value": "[concat('https://', reference(resourceId('Microsoft.Web/staticSites', variables('staticWebAppName')), '2022-03-01').defaultHostname)]"
     }
   }
 }
