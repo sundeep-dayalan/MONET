@@ -9,6 +9,27 @@
         "description": "Base name for the application"
       }
     },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[variables('managedIdentityName')]",
+      "location": "[resourceGroup().location]"
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, variables('clientStorageAccountName'), 'StorageBlobDataContributor')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
+    },
     "releaseVersion": {
       "type": "string",
       "defaultValue": "latest"
@@ -19,7 +40,8 @@
     "functionAppName": "[concat(parameters('appName'), '-app-', variables('uniqueSuffix'))]",
     "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
     "clientStorageAccountName": "[concat('stclient', variables('uniqueSuffix'))]",
-    "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]"
+    "hostingPlanName": "[concat(parameters('appName'), '-plan-', variables('uniqueSuffix'))]",
+    "managedIdentityName": "[concat(parameters('appName'), '-deploy-id-', variables('uniqueSuffix'))]"
   },
   "resources": [
     {
@@ -120,10 +142,14 @@
       "location": "[resourceGroup().location]",
       "kind": "AzureCLI",
       "identity": {
-        "type": "SystemAssigned"
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]": {}
+        }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('clientStorageAccountName'))]",
+        "[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, variables('clientStorageAccountName'), 'StorageBlobDataContributor'))]"
       ],
       "properties": {
         "azCliVersion": "2.50.0",
@@ -144,7 +170,8 @@
             "value": "[if(equals(parameters('releaseVersion'), 'latest'), 'https://github.com/sundeep-dayalan/MONET/releases/latest/download/monet-client.zip', concat('https://github.com/sundeep-dayalan/MONET/releases/download/', parameters('releaseVersion'), '/monet-client.zip'))]"
           }
         ],
-        "scriptContent": "#!/bin/bash\nset -e\n\necho \"Starting client deployment...\"\necho \"Package URL: $PACKAGE_URL\"\necho \"Storage Account: $STORAGE_ACCOUNT_NAME\"\n\n# Download the client package\necho \"Downloading client package...\"\ncurl -L \"$PACKAGE_URL\" -o monet-client.zip\necho \"Download completed. File size: $(ls -lh monet-client.zip | awk '{print $5}')\"\n\n# Extract the package\necho \"Extracting package...\"\nunzip -q monet-client.zip -d ./client\necho \"Extraction completed.\"\n\n# List contents to verify\necho \"Package contents:\"\nfind ./client -type f | head -20\n\n# Get storage account key\necho \"Getting storage account key...\"\nSTORAGE_KEY=$(az storage account keys list --account-name $STORAGE_ACCOUNT_NAME --resource-group $RESOURCE_GROUP_NAME --query '[0].value' -o tsv)\n\n# Upload files to $web container\necho \"Uploading files to blob storage...\"\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --account-key $STORAGE_KEY \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --content-type 'text/html' \\\n  --pattern '*.html'\n\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --account-key $STORAGE_KEY \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --content-type 'application/javascript' \\\n  --pattern '*.js'\n\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --account-key $STORAGE_KEY \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --content-type 'text/css' \\\n  --pattern '*.css'\n\n# Upload remaining files\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --account-key $STORAGE_KEY \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --exclude-pattern '*.html;*.js;*.css'\n\necho \"Client deployment completed successfully!\""
+        "scriptContent": "#!/bin/bash\nset -e\n\necho \"Starting client deployment...\"\necho \"Package URL: $PACKAGE_URL\"\necho \"Storage Account: $STORAGE_ACCOUNT_NAME\"\n\n# Download the client package\necho \"Downloading client package...\"\ncurl -L \"$PACKAGE_URL\" -o monet-client.zip\necho \"Download completed. File size: $(ls -lh monet-client.zip | awk '{print $5}')\"\n\n# Extract the package\necho \"Extracting package...\"\nunzip -q monet-client.zip -d ./client\necho \"Extraction completed.\"\n\n# List contents to verify\necho \"Package contents:\"\nfind ./client -type f | head -20\n\n# Upload files to $web container using managed identity
+echo \"Uploading files to blob storage...\"\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --auth-mode login \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --content-type 'text/html' \\\n  --pattern '*.html'\n\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --auth-mode login \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --content-type 'application/javascript' \\\n  --pattern '*.js'\n\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --auth-mode login \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --content-type 'text/css' \\\n  --pattern '*.css'\n\n# Upload remaining files\naz storage blob upload-batch \\\n  --account-name $STORAGE_ACCOUNT_NAME \\\n  --auth-mode login \\\n  --destination '$web' \\\n  --source './client' \\\n  --overwrite \\\n  --exclude-pattern '*.html;*.js;*.css'\n\necho \"Client deployment completed successfully!\""
       }
     }
   ],
