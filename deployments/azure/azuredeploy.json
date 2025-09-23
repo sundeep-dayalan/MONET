@@ -12,6 +12,13 @@
     "releaseVersion": {
       "type": "string",
       "defaultValue": "latest"
+    },
+    "forceUpdateTag": {
+      "type": "string",
+      "defaultValue": "[utcNow()]",
+      "metadata": {
+        "description": "Used to force the deployment script to re-run when the template changes."
+      }
     }
   },
   "variables": {
@@ -144,7 +151,7 @@
         "retentionInterval": "P1D",
         "cleanupPreference": "OnSuccess",
         "timeout": "PT30M",
-        "forceUpdateTag": "[utcNow()]",
+  "forceUpdateTag": "[parameters('forceUpdateTag')]",
         "environmentVariables": [
           {
             "name": "STATIC_WEB_APP_NAME",
