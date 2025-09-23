@@ -137,7 +137,7 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/staticSites', variables('staticWebAppName'))]",
-        "[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, variables('staticWebAppName'), 'Contributor'))]"
+        "[extensionResourceId(resourceId('Microsoft.Web/staticSites', variables('staticWebAppName')), 'Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, variables('staticWebAppName'), 'Contributor'))]"
       ],
       "properties": {
         "azCliVersion": "2.50.0",
