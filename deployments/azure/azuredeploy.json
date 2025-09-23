@@ -144,6 +144,7 @@
         "retentionInterval": "P1D",
         "cleanupPreference": "OnSuccess",
         "timeout": "PT30M",
+        "forceUpdateTag": "[utcNow()]",
         "environmentVariables": [
           {
             "name": "STATIC_WEB_APP_NAME",
